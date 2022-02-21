@@ -1,3 +1,4 @@
+#!/bin/sh
 cp resources/vulkan_logo.png  build/bin/texture.png
 cp resources/teapot.obj       build/bin/teapot.obj
 
