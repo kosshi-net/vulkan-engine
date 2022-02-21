@@ -180,7 +180,6 @@ VkDevice vk_create_device()
 
 	VkDeviceQueueCreateInfo *qarray = array_create(sizeof(VkDeviceQueueCreateInfo));
 
-	//uint32_t families[] = {qfamily.graphics, qfamily.presentation};
 	uint32_t families[] = {vk.family_graphics, vk.family_presentation};
 	uint32_t families_num = sizeof(families)/sizeof(uint32_t);
 	

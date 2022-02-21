@@ -119,7 +119,5 @@ struct VkEngine {
 
 	VkLayerProperties             *validation_avbl;
 	const char                   **validation_req;
-
-
 };
 

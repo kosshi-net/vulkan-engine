@@ -82,3 +82,9 @@ size_t array_length(void*p)
 	return arr->length;
 }
 
+size_t array_sizeof(void*p)
+{
+	Array arr = &(*(Array*)p)[-1] ;
+	return arr->length * arr->item_size;
+}
+

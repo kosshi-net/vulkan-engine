@@ -52,7 +52,7 @@ void vk_swapchain_details_free(struct VkSwapchainDetails **swap){
 
 
 
-VkSurfaceFormatKHR *ctx_vk_choose_swap_format( struct VkSwapchainDetails *swap)
+VkSurfaceFormatKHR *vk_choose_swap_format( struct VkSwapchainDetails *swap)
 {
 	for( int i = 0; i < swap->format_num; i++ ){
 		VkSurfaceFormatKHR *format = swap->format+i;
@@ -64,7 +64,7 @@ VkSurfaceFormatKHR *ctx_vk_choose_swap_format( struct VkSwapchainDetails *swap)
 	return swap->format;
 }
 
-VkPresentModeKHR ctx_vk_choose_present_mode( struct VkSwapchainDetails *swap )
+VkPresentModeKHR vk_choose_present_mode( struct VkSwapchainDetails *swap )
 {
 	for( int i = 0; i < swap->pmode_num; i++ ){
 		if( swap->pmode[i] == VK_PRESENT_MODE_MAILBOX_KHR )
@@ -73,7 +73,7 @@ VkPresentModeKHR ctx_vk_choose_present_mode( struct VkSwapchainDetails *swap )
 	return  VK_PRESENT_MODE_FIFO_KHR;
 }
 
-VkExtent2D ctx_vk_choose_extent( struct VkSwapchainDetails *swap )
+VkExtent2D vk_choose_extent( struct VkSwapchainDetails *swap )
 {
 	VkSurfaceCapabilitiesKHR *cpbl = &swap->capabilities;
 	if( cpbl->currentExtent.width != UINT32_MAX ){
@@ -109,9 +109,9 @@ void vk_create_swapchain(void){
 
 	struct VkSwapchainDetails *swap = vk_swapchain_details(vk.dev_physical);
 	
-	VkSurfaceFormatKHR surface_format = *ctx_vk_choose_swap_format(swap);
-	VkPresentModeKHR   pmode          =  ctx_vk_choose_present_mode(swap);
-	VkExtent2D         extent         =  ctx_vk_choose_extent(swap);
+	VkSurfaceFormatKHR surface_format = *vk_choose_swap_format(swap);
+	VkPresentModeKHR   pmode          =  vk_choose_present_mode(swap);
+	VkExtent2D         extent         =  vk_choose_extent(swap);
 
 	uint32_t image_num =swap->capabilities.minImageCount+1;
 	if(swap->capabilities.maxImageCount > 0 )

@@ -59,6 +59,10 @@ set( VERSION_MINOR 1 )
 
 ### LIBRARIES ### 
 
+
+	add_subdirectory	(${EXTERNAL}/fast_obj)
+	include_directories (${EXTERNAL}/fast_obj)
+
 	# GLFW
 	add_subdirectory	(${EXTERNAL}/glfw)
 	include_directories	(${EXTERNAL}/glfw/include) # windows wants this

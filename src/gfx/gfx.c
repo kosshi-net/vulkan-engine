@@ -22,102 +22,52 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
+#include <fast_obj.h>
+
 #define CGLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <cglm/cglm.h>
+
+
+/***********************
+ * NECESSARY FUNC DEFS *
+ ***********************/
+
+static VkFormat vk_find_depth_format(void);
+void vk_create_depth_resources(void);
+
+/**************
+ * TEMP UTILS *
+ **************/
 
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 
-// Necessary function definitions
-static VkFormat vk_find_depth_format(void);
-void vk_create_depth_resources(void);
-
-struct VkEngine vk;
-
-float ctx_triangle[] = {
-	1.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f,
-	1.0f, 0.0f, 1.0f,   0.0f, 1.0f, 1.0f,
-	1.0f, 1.0f, 1.0f,   1.0f, 1.0f, 1.0f,
-	1.0f, 1.0f, 0.0f,   1.0f, 0.0f, 1.0f,
-
-	0.0f, 1.0f, 0.0f,   0.0f, 0.0f, 1.0f,
-	1.0f, 1.0f, 0.0f,   1.0f, 0.0f, 1.0f,
-	1.0f, 1.0f, 1.0f,   1.0f, 1.0f, 1.0f,
-	0.0f, 1.0f, 1.0f,   0.0f, 1.0f, 1.0f,
-
-	1.0f, 0.0f, 1.0f,   1.0f, 0.0f, 1.0f,
-	0.0f, 0.0f, 1.0f,   0.0f, 0.0f, 1.0f,
-	0.0f, 1.0f, 1.0f,   0.0f, 1.0f, 1.0f,
-	1.0f, 1.0f, 1.0f,   1.0f, 1.0f, 1.0f,
-
-	0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f,
-	0.0f, 0.0f, 1.0f,   0.0f, 1.0f, 1.0f,
-	0.0f, 1.0f, 1.0f,   1.0f, 1.0f, 1.0f,
-	0.0f, 1.0f, 0.0f,   1.0f, 0.0f, 1.0f,
-
-	0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f,
-	1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 1.0f,
-	1.0f, 0.0f, 1.0f,   1.0f, 1.0f, 1.0f,
-	0.0f, 0.0f, 1.0f,   0.0f, 1.0f, 1.0f,
-
-	1.0f, 0.0f, 0.0f,   1.0f, 0.0f, 1.0f,
-	0.0f, 0.0f, 0.0f,   0.0f, 0.0f, 1.0f,
-	0.0f, 1.0f, 0.0f,   0.0f, 1.0f, 1.0f,
-	1.0f, 1.0f, 0.0f,   1.0f, 1.0f, 1.0f,
-};
-//const uint16_t ctx_triangle_indices[] = {
-//	0, 1, 2, 2, 3, 0
-//};
-
 float urandf(){
 	return (rand()/(float)RAND_MAX);
 }
-
-uint16_t *ctx_triangle_indices;
-uint32_t ctx_triangle_indices_num = 0;
-void gen_triangle()
-{
-	int i = 0;
-	ctx_triangle_indices = malloc(sizeof(uint16_t) * 6 * 12);
-	for(int t = 0; t < 3; t++){
-		ctx_triangle_indices[i++] = 0 + (t*4);
-		ctx_triangle_indices[i++] = 3 + (t*4);
-		ctx_triangle_indices[i++] = 1 + (t*4);
-		ctx_triangle_indices[i++] = 2 + (t*4);
-		ctx_triangle_indices[i++] = 1 + (t*4);
-		ctx_triangle_indices[i++] = 3 + (t*4);
-	}
-	for(int t = 3; t < 6; t++){
-		ctx_triangle_indices[i++] = 1 + (t*4);
-		ctx_triangle_indices[i++] = 3 + (t*4);
-		ctx_triangle_indices[i++] = 0 + (t*4);
-		ctx_triangle_indices[i++] = 3 + (t*4);
-		ctx_triangle_indices[i++] = 1 + (t*4);
-		ctx_triangle_indices[i++] = 2 + (t*4);
-	}
-
-	ctx_triangle_indices_num = i;
-
-	for( int l = 0; l < 24; l++ ){
-		float *line = ctx_triangle + (l * 6);
-		line[0] -= 0.5;
-		line[1] -= 0.5;
-		line[2] -= 0.5;
-		//line[3] = urandf();
-		//line[4] = urandf();
-		//line[5] = urandf();
-	}
-
+float randf(){
+	return (rand()/(float)RAND_MAX)*2.0-1.0;
 }
 
 
-VkVertexInputBindingDescription ctx_triangle_binding = {
+struct VkEngine vk;
+
+
+
+/*****************
+ * SCENE & TEPOT *
+ *****************/
+
+float    *pot_vertex;
+uint16_t *pot_index;
+
+VkVertexInputBindingDescription pot_binding = {
 	.binding   = 0,
-	.stride    = sizeof(float) * 6, // 2 pos, 3 coor
+	.stride    = sizeof(float) * 9, // 2 pos, 3 coor
 	.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
 };
 
-VkVertexInputAttributeDescription ctx_triangle_attributes[2] =
+VkVertexInputAttributeDescription pot_attributes[] =
 {
 	{
 		.binding  = 0,
@@ -130,33 +80,123 @@ VkVertexInputAttributeDescription ctx_triangle_attributes[2] =
 		.location = 1,
 		.format   = VK_FORMAT_R32G32B32_SFLOAT,
 		.offset   = sizeof(float)*3,
+	},
+	{
+		.binding  = 0,
+		.location = 2,
+		.format   = VK_FORMAT_R32G32B32_SFLOAT,
+		.offset   = sizeof(float)*6,
 	}
 };
-/*******************  ***
- * TODO TEMPORAR GLOBALS *
- * * *** *** ** ** ***/
 
 struct SceneUBO scene_ubo;
 
 struct TestScene {
 	int object_num;
+	float *seeds;
 };
 
 struct TestScene scene = {
-	.object_num = 512,
+	.object_num = 9,
 };
 
-/*struct UniformBufferObject {
-	mat4 model;
-	mat4 view;
-	mat4 proj;
-} ubo;*/
+void init_scene(){
+	int val_num = scene.object_num * 9;
+	scene.seeds = malloc( sizeof(float) * val_num );
+	for(int i = 0; i < val_num; i++){
+		scene.seeds[i] = randf();
+	}
+}
+
+void vk_load_teapot(void){
+
+	fastObjMesh *mesh = fast_obj_read("teapot.obj");
+
+	printf("Loaded utah teapot\n");
+	printf("Groups:    %i\n", mesh->group_count);
+	printf("Objects:   %i\n", mesh->object_count);
+	printf("Materials: %i\n", mesh->material_count);
+	printf("Faces      %i\n", mesh->face_count);
+	printf("Positions  %i\n", mesh->position_count);
+	printf("Indices    %i\n", mesh->index_count);
+	printf("Normals    %i\n", mesh->normal_count);
+	printf("UVs        %i\n", mesh->texcoord_count);
+
+	int idx = 0;
+	pot_vertex = array_create(sizeof(*pot_vertex));
+	pot_index  = array_create(sizeof(*pot_index));
+
+	for ( int i = 0; i < mesh->group_count; i++ ){
+		printf("Group %i) %s\n", i, mesh->groups[i].name);
+
+		fastObjGroup *group = &mesh->groups[i];
+		
+		int gidx = 0;
+
+
+		for( int fi = 0; fi < group->face_count; fi++ ){
+			
+			uint32_t face_verts = mesh->face_vertices[ group->face_offset + fi ];
+
+			switch (face_verts){
+				case 3:
+					array_push(&pot_index, (uint16_t[]){ idx+0 });
+					array_push(&pot_index, (uint16_t[]){ idx+1 });
+					array_push(&pot_index, (uint16_t[]){ idx+2 });
+					break;
+				case 4:
+					array_push(&pot_index, (uint16_t[]){ idx+0 });
+					array_push(&pot_index, (uint16_t[]){ idx+1 });
+					array_push(&pot_index, (uint16_t[]){ idx+2 });
+
+					array_push(&pot_index, (uint16_t[]){ idx+2 });
+					array_push(&pot_index, (uint16_t[]){ idx+3 });
+					array_push(&pot_index, (uint16_t[]){ idx+0 });
+					break;
+				default:
+					printf("UNSUPPORTED POLYGON %i\n", face_verts);
+					break;
+			}
+
+			
+			for( int ii = 0; ii < face_verts; ii++ ){
+				fastObjIndex mi = mesh->indices[group->index_offset + gidx];
+					
+				array_push(&pot_vertex, &mesh->positions[3 * mi.p + 0]);
+				array_push(&pot_vertex, &mesh->positions[3 * mi.p + 1]);
+				array_push(&pot_vertex, &mesh->positions[3 * mi.p + 2]);
+
+				array_push(&pot_vertex, (float[]){mesh->texcoords[2 * mi.t + 0]});
+				array_push(&pot_vertex, (float[]){-mesh->texcoords[2 * mi.t + 1]});
+
+				array_push(&pot_vertex, (float[]){1.0});
+
+				array_push(&pot_vertex, &mesh->normals[3 * mi.n + 0]);
+				array_push(&pot_vertex, &mesh->normals[3 * mi.n + 1]);
+				array_push(&pot_vertex, &mesh->normals[3 * mi.n + 2]);
+
+
+				gidx++;
+				idx++;
+			}
+
+		}
+
+	}
+
+
+	printf("Pot floats: %li\n", array_length(&pot_vertex) );
+	printf("Pot indices: %i\n", idx);
+
+	fast_obj_destroy(mesh);
+}
+
 
 /***************
  * ATTACH DESC *
  ***************/
 
-void ctx_vk_create_render_pass()
+void vk_create_render_pass()
 {
 	if(vk.error) return;
 
@@ -232,7 +272,7 @@ void ctx_vk_create_render_pass()
  * PIPELINE *
  ************/
 
-VkShaderModule ctx_vk_create_shader_module(enum Resource file)
+VkShaderModule vk_create_shader_module(enum Resource file)
 {
 	if(vk.error) return NULL;
 
@@ -259,12 +299,12 @@ VkShaderModule ctx_vk_create_shader_module(enum Resource file)
 	return shader_module;
 }
 
-void ctx_vk_create_pipeline()
+void vk_create_pipeline()
 {
 	if(vk.error) return;
 
-	VkShaderModule vert_shader = ctx_vk_create_shader_module(RES_SHADER_VERT_TEST);
-	VkShaderModule frag_shader = ctx_vk_create_shader_module(RES_SHADER_FRAG_TEST);
+	VkShaderModule vert_shader = vk_create_shader_module(RES_SHADER_VERT_TEST);
+	VkShaderModule frag_shader = vk_create_shader_module(RES_SHADER_FRAG_TEST);
 
 	if(vk.error) return;
 
@@ -285,22 +325,13 @@ void ctx_vk_create_pipeline()
 		}
 	};
 
-	/*
-	VkPipelineVertexInputStateCreateInfo vertex_info = {
-		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
-		.vertexBindingDescriptionCount = 0,
-		.pVertexBindingDescriptions = NULL,
-		.vertexAttributeDescriptionCount = 0,
-		.pVertexAttributeDescriptions = NULL,
-	};*/
-
 	VkPipelineVertexInputStateCreateInfo vertex_info = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_VERTEX_INPUT_STATE_CREATE_INFO,
 		.vertexBindingDescriptionCount    = 1,
-		.pVertexBindingDescriptions       = &ctx_triangle_binding,
+		.pVertexBindingDescriptions       = &pot_binding,
 
-		.vertexAttributeDescriptionCount  = 2, // magic number ):
-		.pVertexAttributeDescriptions     = ctx_triangle_attributes,
+		.vertexAttributeDescriptionCount  = LENGTH(pot_attributes), 
+		.pVertexAttributeDescriptions     = pot_attributes,
 	};
 
 
@@ -448,7 +479,7 @@ void ctx_vk_create_pipeline()
  * FRAMEBUFFER *
  ***************/ 
 
-void ctx_vk_create_framebuffers()
+void vk_create_framebuffers()
 {
 	if(vk.error) return;
 
@@ -513,7 +544,7 @@ void vk_init_frame( struct Frame *frame )
 
 	/*
 	 * Command pool and buffer
-	 * */
+	 */
 
 	VkCommandPoolCreateInfo pool_info = {
 		.sType = VK_STRUCTURE_TYPE_COMMAND_POOL_CREATE_INFO,
@@ -535,7 +566,7 @@ void vk_init_frame( struct Frame *frame )
 	
 	/*
 	 * Sync
-	 * */
+	 */
 
 	VkSemaphoreCreateInfo sema_info = {
 		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
@@ -565,7 +596,7 @@ void vk_init_frame( struct Frame *frame )
 
 	/*
 	 * Descriptor sets
-	 * */
+	 */
 	
 	VkDescriptorSetAllocateInfo desc_ainfo = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -613,8 +644,6 @@ void vk_init_frame( struct Frame *frame )
 	vkUpdateDescriptorSets(vk.dev, LENGTH(desc_write), desc_write, 0, NULL);
 
 	// Dynamic Descriptor
-
-
 	VkDescriptorSetAllocateInfo dyndesc_ainfo = {
 		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
 		.descriptorPool     = vk.descriptor_pool,
@@ -646,7 +675,7 @@ void vk_destroy_frame( struct Frame *frame )
 	}
 }
 
-void ctx_vk_create_sync()
+void vk_create_sync()
 {
 	if( vk.error ) return;
 	vk.fence_image = calloc( sizeof(vk.swapchain_img_num), sizeof(VkFence) );
@@ -711,7 +740,7 @@ void frame_record_cmds( struct Frame *frame , int image )
 			&dynamic_offset
 		);
 
-		vkCmdDrawIndexed(cmd, ctx_triangle_indices_num, 1, 0, 0, 0);
+		vkCmdDrawIndexed(cmd, array_length(&pot_index), 1, 0, 0, 0);
 	}
 	vkCmdEndRenderPass(cmd);
 
@@ -730,12 +759,12 @@ void frame_record_cmds( struct Frame *frame , int image )
  *****************/
 
 
-void ctx_vk_create_vertex_buffer()
+void vk_create_vertex_buffer()
 {
 	if(vk.error) return;
 
 	vk_create_buffer_vma(
-		sizeof(ctx_triangle),
+		array_sizeof(&pot_vertex),
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
 		VMA_MEMORY_USAGE_CPU_TO_GPU,
 		&vk.staging_buffer,
@@ -746,11 +775,11 @@ void ctx_vk_create_vertex_buffer()
 
 	void *data;
 	vmaMapMemory(vk.vma, vk.staging_alloc, &data);
-	memcpy(data, ctx_triangle, sizeof(ctx_triangle));
+	memcpy(data, pot_vertex, array_sizeof(&pot_vertex));
 	vmaUnmapMemory(vk.vma, vk.staging_alloc);
 
 	vk_create_buffer_vma(
-		sizeof(ctx_triangle),
+		array_sizeof(&pot_vertex),
 		VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
 		VMA_MEMORY_USAGE_GPU_ONLY,
 		&vk.vertex_buffer,
@@ -758,14 +787,14 @@ void ctx_vk_create_vertex_buffer()
 	);
 	if(vk.error) return;
 
-	vk_copy_buffer(vk.staging_buffer, vk.vertex_buffer, sizeof(ctx_triangle));
+	vk_copy_buffer(vk.staging_buffer, vk.vertex_buffer, array_sizeof(&pot_vertex));
 	vmaDestroyBuffer(vk.vma, vk.staging_buffer, vk.staging_alloc);
 }
 
-void ctx_vk_create_index_buffer(){
+void vk_create_index_buffer(){
 	if(vk.error) return;
 
-	uint32_t size = ctx_triangle_indices_num * sizeof(uint16_t);
+	uint32_t size = array_sizeof(&pot_index);
 
 	vk_create_buffer_vma(
 		size,
@@ -779,7 +808,7 @@ void ctx_vk_create_index_buffer(){
 
 	void *data;
 	vmaMapMemory(vk.vma, vk.staging_alloc, &data);
-	memcpy(data, ctx_triangle_indices, size);
+	memcpy(data, pot_index, size);
 	vmaUnmapMemory(vk.vma, vk.staging_alloc);
 
 	vk_create_buffer_vma(
@@ -841,7 +870,7 @@ void vk_create_object_descriptor_layout()
 	if(vk.error) return;
 
 	VkDescriptorSetLayoutBinding ubo_binding = {
-		.binding = 0, // TODO is this right??
+		.binding = 0, 
 		.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
 		.descriptorCount = 1,
 		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
@@ -893,18 +922,30 @@ void vk_update_object_buffer(struct Frame *frame)
 	for( int i = 0; i < scene.object_num; i++ ){
 		mat4 model; 
 		glm_mat4_identity(model);
+
+		float *s = scene.seeds+(i*9);
+
 		float t = now*0.3;
 		float x = sin(t+i*0.7)*5.0;
 		float y = cos(t+i*0.7)*5.0;
-		float z = i*0.3;
+		float z = s[8]+1.5;
+
 		glm_translate_x(model, x);
 		glm_translate_y(model, y);
 		glm_translate_z(model, z);
-		glm_rotate_y(
-			model,
-			glm_rad(90)*(now+i*0.1383), 
-			model
-		);
+		
+		float axis [3] = {s[0]*M_PI, s[1]*M_PI, s[2]*M_PI};
+		float axis2[3] = {s[3]*M_PI, s[4]*M_PI, s[5]*M_PI};
+		glm_vec3_normalize(axis);
+		
+		glm_rotate(model, glm_rad(s[6]*360.0), axis);
+		glm_rotate(model, glm_rad(s[7]*now*100.0), axis2);
+
+		float scale = 0.10;
+		glm_scale(model, (float[]){scale, scale, scale});
+
+		glm_translate_z(model, -5.0);
+
 		memcpy(object_buffer[i].model, model, sizeof(model));
 	}
 
@@ -946,13 +987,10 @@ void vk_update_uniform_buffer(struct Frame *frame)
 	static double last = 0;
 
 	double now   = glfwGetTime();
-	//double delta = now-last;
 
-	//glm_mat4_identity(scene_ubo.model);
 	glm_mat4_identity(scene_ubo.view);
 	glm_mat4_identity(scene_ubo.proj);
 
-	//glm_rotate_y(scene_ubo.model, glm_rad(90)*now, scene_ubo.model); !!
 	
 	glm_perspective(
 		glm_rad(45.0f), 
@@ -960,13 +998,10 @@ void vk_update_uniform_buffer(struct Frame *frame)
 		0.1f, 1000.0f,
 		scene_ubo.proj
 	);
-	//glm_translate_x(scene_ubo.proj, 10.0);
-	//glm_translate_y(scene_ubo.proj, 0.0);
-	//glm_translate_z(scene_ubo.proj, 0.0);
 
 	glm_lookat( 
-		(vec4){0.0f, 8.0f, 165.0f},
-		(vec4){0.0f, 0.0f, 145.0f},
+		(vec4){0.0f, 10.0f, 10.0f},
+		(vec4){0.0f, 0.0f, 0.0f},
 		(vec4){0.0f, 0.0f, 1.0f},
 		scene_ubo.view
 	);
@@ -974,7 +1009,6 @@ void vk_update_uniform_buffer(struct Frame *frame)
 	scene_ubo.proj[1][1] *= -1; // ????
 
 	last = now;
-
 
 	void *data;
 	vmaMapMemory(vk.vma, frame->uniform_alloc, &data);
@@ -984,7 +1018,7 @@ void vk_update_uniform_buffer(struct Frame *frame)
 }
 
 
-void ctx_vk_create_descriptor_pool()
+void vk_create_descriptor_pool()
 {
 	if(vk.error) return;
 	VkDescriptorPoolSize pool_sizes[] = {
@@ -1024,7 +1058,7 @@ void ctx_vk_create_descriptor_pool()
  * DRAW *
  ********/
 
-void ctx_vk_recreate_swapchain()
+void vk_recreate_swapchain()
 {
 	if(vk.error) return;
 	
@@ -1045,10 +1079,10 @@ void ctx_vk_recreate_swapchain()
 	vk_create_swapchain();
 	vk_create_image_views();
 
-	ctx_vk_create_render_pass();
-	ctx_vk_create_pipeline();
+	vk_create_render_pass();
+	vk_create_pipeline();
 	vk_create_depth_resources();
-	ctx_vk_create_framebuffers();
+	vk_create_framebuffers();
 
 	vk.framebuffer_resize = false;
 	vk.last_resize = now;
@@ -1072,14 +1106,12 @@ void draw_frame()
 			&image_index);
 
 	if(ret == VK_ERROR_OUT_OF_DATE_KHR ){
-		ctx_vk_recreate_swapchain();
+		vk_recreate_swapchain();
 		return;
 	}else if(ret != VK_SUCCESS && ret != VK_SUBOPTIMAL_KHR){
 		vk.error = "Unhandled image acquire error";
 		return;
 	}
-	
-	//printf("%i, %i, %i\n", vk.current_frame, image_index, vk.swapchain_img_num);
 	
 	if(vk.fence_image[image_index] != VK_NULL_HANDLE){
 		vkWaitForFences(vk.dev, 1, &vk.fence_image[image_index], VK_TRUE, UINT64_MAX);
@@ -1132,7 +1164,7 @@ void draw_frame()
 	if(ret == VK_ERROR_OUT_OF_DATE_KHR 
 	|| ret == VK_SUBOPTIMAL_KHR 
 	|| vk.framebuffer_resize){
-		ctx_vk_recreate_swapchain();
+		vk_recreate_swapchain();
 	}else if(ret != VK_SUCCESS){
 		vk.error = "Presentation failure";
 		return;
@@ -1366,7 +1398,6 @@ void vk_create_texture_sampler()
 
 }
 
-
 /*********
  * DEPTH *
  *********/
@@ -1457,9 +1488,6 @@ void vk_create_depth_resources()
 		vk.error = "Failed to create depth image view";
 		return;
 	};
-	
-
-	
 }
 
 /*******
@@ -1487,7 +1515,7 @@ void vk_create_allocator()
  * MAIN *
  ********/
 
-static void ctx_vk_resize_callback(GLFWwindow *window, int w, int h)
+static void vk_resize_callback(GLFWwindow *window, int w, int h)
 {
 	vk.framebuffer_resize = true;
 }
@@ -1497,7 +1525,8 @@ int ctx_init(void)
 	memset( &vk, 0, sizeof(struct VkEngine) );
 	vk._verbose = true;
 
-	gen_triangle();
+	vk_load_teapot();
+	init_scene();
 
 	if(!glfwInit()){
 		printf("GLFW Init failure");
@@ -1511,17 +1540,17 @@ int ctx_init(void)
 		return 1;
 	}
 
-
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE,  GLFW_TRUE);
 	vk.window = glfwCreateWindow(800,600,"Vulkan vk.window",NULL,NULL);
-	glfwSetFramebufferSizeCallback(vk.window, ctx_vk_resize_callback);
+	glfwSetFramebufferSizeCallback(vk.window, vk_resize_callback);
 
 
 	vk_instance_ext_get_avbl();
 	vk_validation_get_avbl();
 	vk_validation_add("VK_LAYER_KHRONOS_validation");
-	vk_create_instance(); // INSTANCE!
+	vk_create_instance(); 
+
 	if(vk.error){
 		printf("%s\n", vk.error);
 		return -1;
@@ -1540,41 +1569,45 @@ int ctx_init(void)
 	vk_create_swapchain();
 	vk_create_image_views();
 	vk_create_texture_sampler();
-	ctx_vk_create_render_pass();
+	vk_create_render_pass();
 
 	vk_create_scene_descriptor_layout();
 	vk_create_object_descriptor_layout();
 
-	ctx_vk_create_pipeline();
+	vk_create_pipeline();
 
 	vk_create_cmd_pool();
 
 	vk_create_depth_resources();
-	ctx_vk_create_framebuffers();
+	vk_create_framebuffers();
 	vk_create_texture();
 	vk_create_texture_view();
-	ctx_vk_create_vertex_buffer();
-	ctx_vk_create_index_buffer();
-	ctx_vk_create_descriptor_pool();
-	ctx_vk_create_sync();
+	vk_create_vertex_buffer();
+	vk_create_index_buffer();
+	vk_create_descriptor_pool();
+	vk_create_sync();
 
 	for(int i = 0; i < VK_MAX_FRAMES_IN_FLIGHT; i++){
 		vk_init_frame( &vk.frames[i] );
 	}
 	
 	int frames = 0;
-	double last = glfwGetTime();
+	double last_title = glfwGetTime();
+	double last =       glfwGetTime();
 
-	printf("MinAligment %li\n", vk.dev_properties.limits.minUniformBufferOffsetAlignment);
+	printf("MinAligment %li\n", vk.dev_properties.limits.minUniformBufferOffsetAlignment); // TODO!!!
 
 	while (!glfwWindowShouldClose(vk.window) && !vk.error) {
 
 		double now = glfwGetTime();
-		if( last + 1.0 < now ){
+		double delta = now - last;
+		last = now;
+
+		if( last_title + 1.0 < now ){
 			static char title[128];
-			snprintf(title, 128, "Vulkan [%i FPS]\n", frames);
+			snprintf(title, 128, "Vulkan [%i FPS] [%0.2f ms]\n", frames, (delta*1000.0));
 			glfwSetWindowTitle(vk.window, title);
-			last += 1.0;
+			last_title += 1.0;
 			frames = 0;
 		}
 
@@ -1582,7 +1615,7 @@ int ctx_init(void)
 		glfwPollEvents();
 		draw_frame();
 		frames++;
-		//usleep(1000*1);
+		usleep(1000*3); // Temp framerate limiter
 	}
 
 	if(vk.dev) vkDeviceWaitIdle(vk.dev);
@@ -1590,7 +1623,7 @@ int ctx_init(void)
 	if(vk.error){
 		printf("Vulkan error: %s\n", vk.error);
 		printf("cerrnostr: %s\n", strerror(errno));
-		return 1;
+		return 1; // Unclean exit!!
 	}
 
 	vk_destroy_swapchain();
@@ -1623,8 +1656,6 @@ int ctx_init(void)
 	vkDestroyDevice(vk.dev, NULL);
 	printf("Free ins\n");
 	vkDestroyInstance(vk.instance, NULL);
-
-
 
 	printf("Free win\n");
 	glfwDestroyWindow(vk.window);

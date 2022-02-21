@@ -34,5 +34,6 @@ target_link_libraries( engine
 	vulkan
 	glfw
 	freetype
+	fast_obj_lib
 )
 

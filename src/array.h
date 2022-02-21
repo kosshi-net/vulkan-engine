@@ -12,6 +12,10 @@ void array_push(void*, const void*data);
 /* Pass by address */
 size_t array_length(void*);
 
+/* Returns length * sizeof element
+ * Pass by address */
+size_t array_sizeof(void*);
+
 /* Pass by address */
 void array_destroy(void*);
 

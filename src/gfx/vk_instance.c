@@ -3,10 +3,6 @@
 #include "common.h"
 #include "array.h"
 
-/*
- * Instance creation
- */
-
 extern struct VkEngine vk;
 
 /**************
