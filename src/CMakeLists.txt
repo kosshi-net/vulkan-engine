@@ -1,25 +1,33 @@
+include_directories	(engine)
+
 add_executable( engine
 	main.c
-	array.c
-	res.c
-	fileutil.c
 
+	engine/engine.c
+	engine/res.c
+	engine/fileutil.c
+	engine/ppm.c
 
-	gfx/gfx.c
-	gfx/vk_util.c
-	gfx/vk_instance.c
-	gfx/vk_device.c
-	gfx/vk_swapchain.c
+	engine/event/event.c
+	engine/win/win.c
 
-	gfx/vma.cpp
+	engine/gfx/gfx.c
+	engine/gfx/vk_util.c
+	engine/gfx/vk_instance.c
+	engine/gfx/vk_device.c
+	engine/gfx/vk_swapchain.c
+	engine/gfx/text/vk_text.c
+	engine/gfx/text/text.c
+	engine/gfx/vma.cpp
 )
 
 target_compile_options( engine PUBLIC
-	#"-O2"
+	"-O3"
 	#"-mavx2"
 	#"-ffast-math"
 	#"-march=native"
 	#"-ftree-vectorize"
+	#"-O3"
 	"-Wformat-truncation=0"
 	"-Wall"
 	"-static"
@@ -31,9 +39,12 @@ target_compile_options( engine PUBLIC
 target_link_libraries( engine
 	"${OpenMP_CXX_FLAGS}"	
 	OpenMP::OpenMP_CXX
+	${FRIBIDI_LIBRARIES}
 	vulkan
 	glfw
 	freetype
 	fast_obj_lib
+	harfbuzz
+
 )
 

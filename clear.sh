@@ -1,7 +1,8 @@
 #!/bin/sh
-rm build -r;
+rm build -rfv;
 mkdir build;
 cd build;
 cmake ..;
 cp compile_commands.json ..
 cd ..;
+

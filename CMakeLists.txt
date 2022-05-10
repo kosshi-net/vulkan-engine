@@ -43,7 +43,7 @@ set( VERSION_MINOR 1 )
 ### CLI OPTIONS ###
 	option( DEBUG "Compile in debugging mode" )
 	
-	#if(DEBUG)
+	if(DEBUG)
 		set( CMAKE_BUILD_TYPE Debug ) 
 		set( CMAKE_BUILD_TYPE RelWithDebInfo )
 		set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}
@@ -55,7 +55,7 @@ set( VERSION_MINOR 1 )
 		set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} 
 			-fno-omit-frame-pointer 
 			-fsanitize=address")
-		#endif(DEBUG)
+	endif(DEBUG)
 
 ### LIBRARIES ### 
 
@@ -74,7 +74,6 @@ set( VERSION_MINOR 1 )
 	# CGLM (header-only)
 	include_directories	(${EXTERNAL}/cglm/include)
 
-
 	# VulkanMemoryAllocator
 	include_directories	(${EXTERNAL}/VulkanMemoryAllocator/include)
 
@@ -84,9 +83,14 @@ set( VERSION_MINOR 1 )
 
 	# OPENMP
 	find_package(OpenMP REQUIRED)
-	# In case linters still complain:
-	# include_directories(/usr/lib/gcc/x86_64-pc-linux-gnu/8.2.1/include/)
-	# "find /usr -name omp.h"
+	
+	# HARFBUZZ
+	find_package(harfbuzz REQUIRED)
+
+	# FRIBIDI 
+	include(FindPkgConfig)
+	pkg_search_module (FRIBIDI REQUIRED fribidi)
+	include_directories	(${FRIBIDI_INCLUDE_DIRS})	
 
 	include_directories	(include)	
 	include_directories	(src)
@@ -94,5 +98,4 @@ set( VERSION_MINOR 1 )
 
 ### BUILD ###
 
-add_subdirectory(src/tests)
 add_subdirectory(src)
