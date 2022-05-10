@@ -2,22 +2,21 @@
 
 Hello Vulkan! A learner project in C. Aim is to implement a reasonable base for a game engine.
 
-https://user-images.githubusercontent.com/19539479/154944471-8bf0f198-ee2f-4e73-84c0-0dd79d597658.mp4
 
 ## Current features
 ### General
 - Able to load and draw .obj models
- - Dynamic descriptors used for rendering the same model with different transforms
- - UBOs used instead of push constants
+	- Dynamic descriptors used for rendering the same model with different transforms
+	- UBOs used instead of push constants
 - Extensive use of C's designated initialziers makes the code the prettiest Vulkan you'll ever see 😊
 - Targets Vulkan 1.2 (so no dynamic render passes for now)
 
 ### Text rendering 
 - Good enough unicode support
-- "Textured quads" - type 
+- Textured quads - type 
 - Glyph caching system
 - Shaping
-- Supports fallback fonts (using a brute force approach ...)
+- Supports fallback fonts (using a brute force approach)
 - Supports bidirectional text
 - Rudimentary support for line wrapping and basic layouting (centering, aligning)
 - Libraries used: Harzbuff, Freetype, GNU Fribidi
@@ -35,14 +34,16 @@ generation.
 
 ![Text rendering](images/screenshot.png?raw=true)
 
+https://user-images.githubusercontent.com/19539479/154944471-8bf0f198-ee2f-4e73-84c0-0dd79d597658.mp4
+
 ## To fix (besides the obvious)
 - Handle minUniformBufferOffsetAlignment properly
- - Temp. patched with __attribute__ aligned 256
+	- Temp. patched with __attribute__ aligned 256
 - Buffers
- - Stop using depricated VMA usage flags 
- - Stop recreating the staging buffer
+	- Stop using depricated VMA usage flags 
+	- Stop recreating the staging buffer
 - Make sure atlas upload is synced properly 
- - Pipeline barriers?
+	- Pipeline barriers?
 - Use less wasteful buffers for text (uint16_t over float?)
 
 ## Building
