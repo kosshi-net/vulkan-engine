@@ -18,6 +18,7 @@ int main(int argc, char**argv)
 
 	struct {
 		struct TextContext *ctx;
+		uint32_t            gfx;
 		struct TextBlock   *hello;
 		struct TextBlock   *stats;
 		struct TextBlock   *tea;
@@ -50,10 +51,9 @@ int main(int argc, char**argv)
 	txtblk_edit(txt.ac, teapasta);
 	txtblk_edit(txt.ar, teapasta);
 
-
 	txtctx_add(txt.hello);
-	vk_text_add_ctx(txt.ctx);
-	gfx_init(); // TODO !!!!
+
+	txt.gfx = gfx_text_renderer_create(txt.ctx);
 
 	uint32_t frames = 0;
 	uint32_t fps_max = 300;
@@ -89,6 +89,11 @@ int main(int argc, char**argv)
 		txtctx_add(txt.ac);
 		txtctx_add(txt.ar);
 
+		struct Frame *frame = frame_begin();
+		gfx_draw_teapots(frame->vk);
+		gfx_text_draw(frame, txt.gfx);
+		frame_end(frame);
+
 		engine_tick();
 
 		sleep = (1.0f/(float)fps_max) - (glfwGetTime()-now);
@@ -97,6 +102,10 @@ int main(int argc, char**argv)
 		}
 		frames++;
 	}
+
+	engine_wait_idle();
+
+	gfx_text_renderer_destroy(txt.gfx);
 
 	engine_destroy();
 

@@ -11,7 +11,6 @@
 #include "gfx/vk_instance.h"
 #include "gfx/vk_device.h"
 #include "gfx/vk_swapchain.h"
-#include "gfx/text/vk_text.h"
 
 #include <errno.h>
 #include <unistd.h>
@@ -27,10 +26,13 @@
 #include <cglm/cglm.h>
 
 
-/***********************
- * NECESSARY FUNC DEFS *
- ***********************/
 
+
+/***********
+ * GLOBALS *
+ ***********/
+
+struct VkEngine vk;
 void vk_create_depth_resources(void);
 
 /**************
@@ -40,12 +42,11 @@ void vk_create_depth_resources(void);
 float urandf(){
 	return (rand()/(float)RAND_MAX);
 }
+
 float randf(){
 	return (rand()/(float)RAND_MAX)*2.0-1.0;
 }
 
-
-struct VkEngine vk;
 
 /*****************
  * SCENE & TEPOT *
@@ -129,7 +130,7 @@ void vk_load_teapot(void){
 			
 			uint32_t face_verts = mesh->face_vertices[ group->face_offset + fi ];
 
-			switch (face_verts){
+			switch (face_verts) {
 				case 3:
 					array_push(pot_index, idx+0 );
 					array_push(pot_index, idx+1 );
@@ -166,13 +167,11 @@ void vk_load_teapot(void){
 				array_push(pot_vertex, mesh->normals[3 * mi.n + 1]);
 				array_push(pot_vertex, mesh->normals[3 * mi.n + 2]);
 
-
 				gidx++;
 				idx++;
 			}
 		}
 	}
-
 
 	printf("Pot floats: %li\n", array_length(pot_vertex) );
 	printf("Pot indices: %i\n", idx);
@@ -496,7 +495,7 @@ void vk_create_cmd_pool()
 }
 
 
-void vk_init_frame( struct Frame *frame )
+void vk_init_frame( struct VkFrame *frame )
 {
 	if(vk.error) return;
 	VkResult ret; 
@@ -614,77 +613,14 @@ void vk_init_frame( struct Frame *frame )
 	ret = vkAllocateDescriptorSets(vk.dev, &dyndesc_ainfo, &frame->object_descriptor_dynamic);
 	if(ret != VK_SUCCESS) goto failure;
 	
-	/* 
-	 * Text
-	 */
-{
-	vk_create_buffer_vma(
-		sizeof(struct TextUBO),
-		VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-		VMA_MEMORY_USAGE_CPU_TO_GPU,
-		&frame->text.uniform_buffer,
-		&frame->text.uniform_alloc
-	);
-		
-	VkDescriptorSetAllocateInfo desc_ainfo = {
-		.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-		.descriptorPool     = vk.descriptor_pool,
-		.descriptorSetCount = 1,
-		.pSetLayouts        = &vk.text.descriptor_layout
-	};
-	ret = vkAllocateDescriptorSets(vk.dev, &desc_ainfo, &frame->text.descriptor_set);
-	if(ret != VK_SUCCESS) goto failure;
-
-	VkDescriptorBufferInfo uniform_buffer_info = {
-		.buffer = frame->text.uniform_buffer,
-		.offset = 0,
-		.range  = sizeof(struct TextUBO)
-	};
-	VkDescriptorImageInfo uniform_image_info = {
-		.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-		.imageView   = vk.text.texture_view,
-		.sampler     = vk.texture_sampler,
-	};
-	VkWriteDescriptorSet desc_write[] = {
-		{
-			.sType              = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.dstSet             = frame->text.descriptor_set,
-			.dstBinding         = 0,
-			.dstArrayElement    = 0,
-			.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-			.descriptorCount    = 1,
-			.pBufferInfo        = &uniform_buffer_info,
-			.pImageInfo         = NULL,
-			.pTexelBufferView   = NULL,
-		},
-		{
-			.sType              = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-			.dstSet             = frame->text.descriptor_set,
-			.dstBinding         = 1,
-			.dstArrayElement    = 0,
-			.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-			.descriptorCount    = 1,
-			.pBufferInfo        = NULL,
-			.pImageInfo         = &uniform_image_info,
-			.pTexelBufferView   = NULL,
-		},
-	};
-	vkUpdateDescriptorSets(vk.dev, LENGTH(desc_write), desc_write, 0, NULL);
-
-	vk_text_frame_create(frame);
-
-}
-
 	return;
 failure:
 	vk.error = "Failed to initialize frames";
 }
 
-void vk_destroy_frame( struct Frame *frame )
+void vk_destroy_frame( struct VkFrame *frame )
 {
 	printf("Free frame\n");
-
-	vk_text_frame_destroy(frame);
 
 	vkDestroySemaphore(vk.dev, frame->image_available, NULL);
 	vkDestroySemaphore(vk.dev, frame->render_finished, NULL);
@@ -693,9 +629,6 @@ void vk_destroy_frame( struct Frame *frame )
 	vkDestroyCommandPool(vk.dev, frame->cmd_pool, NULL);
 
 	vmaDestroyBuffer(vk.vma, frame->uniform_buffer, frame->uniform_alloc);
-	vmaDestroyBuffer(vk.vma, 
-		frame->text.uniform_buffer, frame->text.uniform_alloc
-	);
 
 	if(frame->object_num){
 		vmaDestroyBuffer(vk.vma, frame->object_buffer, frame->object_alloc);
@@ -709,95 +642,6 @@ void vk_create_sync()
 	return;
 }
 
-void frame_record_cmds( struct Frame *frame , int image )
-{
-	if(vk.error) return;
-	VkResult ret;
-
-	VkCommandBuffer cmd = frame->cmd_buf;
-
-	vkResetCommandBuffer(cmd, 0);
-
-	VkCommandBufferBeginInfo begin_info = {
-		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
-		.flags = 0,
-		.pInheritanceInfo = NULL,
-	};
-	ret = vkBeginCommandBuffer(cmd, &begin_info);
-	if(ret != VK_SUCCESS){
-		vk.error = "Failed to begin recording command buffer";
-		return;
-	}
-
-	VkClearValue clear_color[] = {
-		{{{0.0f, 0.0f, 0.0f, 1.0f}}},
-		{{{1.0,  0.0f}}}
-	};
-
-	VkRenderPassBeginInfo pass_info = {
-		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
-		.renderPass  = vk.renderpass,
-		.framebuffer = vk.framebuffers[image],
-		.renderArea.offset = {0,0},
-		.renderArea.extent = vk.swapchain_extent,
-		.clearValueCount   = LENGTH(clear_color),
-		.pClearValues = clear_color,
-	};
-	vkCmdBeginRenderPass( cmd, &pass_info, VK_SUBPASS_CONTENTS_INLINE );
-
-	VkDeviceSize offsets[] = {0};
-
-	/* Draw pots */
-	vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipeline );
-
-	vkCmdBindVertexBuffers(cmd, 0, 1, &vk.vertex_buffer, offsets);
-	vkCmdBindIndexBuffer(cmd, vk.index_buffer, 0, VK_INDEX_TYPE_UINT16);
-
-	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-		vk.pipeline_layout,
-		0, 1,
-		&frame->descriptor_set, 0, NULL
-	);
-	
-	for (int i = 0; i < scene.object_num; i++) {
-		uint32_t dynamic_offset = sizeof(struct ObjectUBO)*i;
-		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-			vk.pipeline_layout,
-			1, 1,
-			&frame->object_descriptor_dynamic, 
-			
-			1, 
-			&dynamic_offset
-		);
-
-		vkCmdDrawIndexed(cmd, array_length(pot_index), 1, 0, 0, 0);
-	}
-
-	/* Draw text */
-	vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.text.pipeline );
-
-	vkCmdBindVertexBuffers(cmd, 0, 1, &frame->text.vertex_buffer, offsets);
-	vkCmdBindIndexBuffer(cmd, vk.text.index_buffer, 0, VK_INDEX_TYPE_UINT16);
-
-	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, 
-		vk.text.pipeline_layout,
-		0, 1,
-		&frame->text.descriptor_set, 0, NULL
-	);
-
-	vkCmdDrawIndexed(cmd, frame->text.index_count, 1,0,0,0);
-	//vkCmdDraw( cmd, 3, 1, 0, 0 );
-
-	vkCmdEndRenderPass(cmd);
-
-
-	ret = vkEndCommandBuffer(cmd);
-	if(ret != VK_SUCCESS){
-		vk.error = "Failed to record command buffer";
-		return;
-	}
-	
-}
 
 
 /************
@@ -869,7 +713,7 @@ void vk_create_object_descriptor_layout()
 	}
 }
 
-void vk_update_object_buffer(struct Frame *frame)
+void vk_update_object_buffer(struct VkFrame *frame)
 {
 	if(vk.error) return;
 	double now   = glfwGetTime();
@@ -922,9 +766,7 @@ void vk_update_object_buffer(struct Frame *frame)
 
 		glm_translate_z(model, -5.0);
 		memcpy(object_buffer[i].model, model, sizeof(model));
-
 	}
-
 
 	VkDescriptorBufferInfo object_buffer_info = {
 		.buffer = frame->object_buffer,
@@ -947,8 +789,6 @@ void vk_update_object_buffer(struct Frame *frame)
 	};
 	vkUpdateDescriptorSets(vk.dev, LENGTH(dyndesc_write), dyndesc_write, 0, NULL);
 
-
-
 	void *data;
 	vmaMapMemory(vk.vma, frame->object_alloc, &data);
 	memcpy(data, object_buffer, sizeof(struct ObjectUBO) * scene.object_num);
@@ -957,17 +797,13 @@ void vk_update_object_buffer(struct Frame *frame)
 	free(object_buffer);
 }
 
-void vk_update_uniform_buffer(struct Frame *frame)
+void vk_update_uniform_buffer(struct VkFrame *frame)
 {
 	if(vk.error) return;
-	static double last = 0;
-
-	double now   = glfwGetTime();
 
 	glm_mat4_identity(scene_ubo.view);
 	glm_mat4_identity(scene_ubo.proj);
 
-	
 	glm_perspective(
 		glm_rad(45.0f), 
 		vk.swapchain_extent.width / (float) vk.swapchain_extent.height,
@@ -984,19 +820,16 @@ void vk_update_uniform_buffer(struct Frame *frame)
 
 	scene_ubo.proj[1][1] *= -1; // ????
 
-	last = now;
-
 	void *data;
 	vmaMapMemory(vk.vma, frame->uniform_alloc, &data);
 	memcpy(data, &scene_ubo, sizeof(scene_ubo));
 	vmaUnmapMemory(vk.vma, frame->uniform_alloc);
-
 }
 
 
 void vk_create_descriptor_pool()
 {
-	if(vk.error) return;
+	if (vk.error) return;
 	VkDescriptorPoolSize pool_sizes[] = {
 		{
 			.type  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -1023,16 +856,11 @@ void vk_create_descriptor_pool()
 
 	VkResult ret;
 	ret = vkCreateDescriptorPool(vk.dev, &pool_info, NULL, &vk.descriptor_pool);
-	if(ret != VK_SUCCESS){
+	if (ret != VK_SUCCESS) {
 		vk.error = "Failed to create descriptor pool";
 		return;
 	}
-
-
 }
-/********
- * DRAW *
- ********/
 
 void vk_recreate_swapchain()
 {
@@ -1048,8 +876,9 @@ void vk_recreate_swapchain()
 		glfwWaitEvents();
 	}
 
-
 	vkDeviceWaitIdle(vk.dev);
+
+	event_fire(EVENT_VK_SWAPCHAIN_DESTROY, NULL);
 
 	vk_destroy_swapchain();
 	vk_create_swapchain();
@@ -1057,60 +886,97 @@ void vk_recreate_swapchain()
 
 	vk_create_renderpass();
 
-	vk_text_create_fbdeps();
-
 	vk_create_pipeline();
 	vk_create_depth_resources();
 	vk_create_framebuffers();
+
+	event_fire(EVENT_VK_SWAPCHAIN_CREATE, NULL);
 
 	vk.framebuffer_resize = false;
 	vk.last_resize = now;
 }
 
-
-
-void draw_frame()
+struct VkFrame *gfx_frame_get()
 {
-	if( vk.error ) return;
+	if (vk.error) return NULL;
 	VkResult ret;
 
-	struct Frame *frame = &vk.frames[vk.current_frame];
+	struct VkFrame *restrict frame = &vk.frames[vk.current_frame];
 
 	vkWaitForFences(vk.dev, 1, &frame->flight, VK_TRUE, UINT64_MAX);
-    uint32_t image_index;
     ret = vkAcquireNextImageKHR(vk.dev, vk.swapchain, 
 			UINT64_MAX, 
 			frame->image_available,
 			VK_NULL_HANDLE, 
-			&image_index);
+			&frame->image_index);
 
-	if(ret == VK_ERROR_OUT_OF_DATE_KHR ){
+	if (ret == VK_ERROR_OUT_OF_DATE_KHR ) {
 		vk_recreate_swapchain();
-		return;
-	}else if(ret != VK_SUCCESS && ret != VK_SUBOPTIMAL_KHR){
+	} else if (ret != VK_SUCCESS && ret != VK_SUBOPTIMAL_KHR) {
 		vk.error = "Unhandled image acquire error";
+		return NULL;
+	}
+
+	if (vk.fence_image[frame->image_index] != VK_NULL_HANDLE) {
+		vkWaitForFences(vk.dev, 1, &vk.fence_image[frame->image_index], VK_TRUE, UINT64_MAX);
+	}
+	vk.fence_image[frame->image_index] = frame->flight;
+
+	/* Command buffer stuff */
+
+	VkCommandBuffer cmd = frame->cmd_buf;
+	vkResetCommandBuffer(cmd, 0);
+
+	VkCommandBufferBeginInfo begin_info = {
+		.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO,
+		.flags = 0,
+		.pInheritanceInfo = NULL,
+	};
+	ret = vkBeginCommandBuffer(cmd, &begin_info);
+	if(ret != VK_SUCCESS){
+		vk.error = "Failed to begin recording command buffer";
+		return NULL;
+	}
+
+	VkClearValue clear_color[] = {
+		{{{0.0f, 0.0f, 0.0f, 1.0f}}},
+		{{{1.0,  0.0f}}}
+	};
+
+	VkRenderPassBeginInfo pass_info = {
+		.sType = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO,
+		.renderPass  = vk.renderpass,
+		.framebuffer = vk.framebuffers[frame->image_index],
+		.renderArea.offset = {0,0},
+		.renderArea.extent = vk.swapchain_extent,
+		.clearValueCount   = LENGTH(clear_color),
+		.pClearValues = clear_color,
+	};
+	vkCmdBeginRenderPass( cmd, &pass_info, VK_SUBPASS_CONTENTS_INLINE );
+
+	return frame;
+}
+
+
+
+
+void gfx_frame_submit(struct VkFrame *frame)
+{
+	if (vk.error) return;
+	VkResult ret;
+
+	vkCmdEndRenderPass(frame->cmd_buf);
+	ret = vkEndCommandBuffer(frame->cmd_buf);
+
+	if(ret != VK_SUCCESS){
+		vk.error = "Failed to record command buffer";
 		return;
 	}
-	
-	if(vk.fence_image[image_index] != VK_NULL_HANDLE){
-		vkWaitForFences(vk.dev, 1, &vk.fence_image[image_index], VK_TRUE, UINT64_MAX);
-	}
-	vk.fence_image[image_index] = frame->flight;
+
 
 	VkSemaphore          wait_semas[]  = {frame->image_available};
 	VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
 	VkSemaphore          sig_semas[]   = {frame->render_finished};
-
-	vk_update_object_buffer(frame);
-	if(vk.error) return;
-
-	vk_update_uniform_buffer(frame);
-	if(vk.error) return;
-
-	vk_text_update_uniform_buffer(frame);
-	if(vk.error) return;
-	
-	frame_record_cmds( frame, image_index );
 
 	VkSubmitInfo submit_info = {
 		.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO,
@@ -1126,7 +992,7 @@ void draw_frame()
 	
 	vkResetFences  (vk.dev, 1, &frame->flight);
 	ret = vkQueueSubmit(vk.graphics_queue, 1, &submit_info, frame->flight);
-	if(ret != VK_SUCCESS){
+	if (ret != VK_SUCCESS) {
 		vk.error = "Submit failure";
 		return;
 	}
@@ -1138,7 +1004,7 @@ void draw_frame()
 		.pWaitSemaphores    = sig_semas,
 		.swapchainCount     = 1,
 		.pSwapchains        = swap_chains,
-		.pImageIndices      = &image_index,
+		.pImageIndices      = &frame->image_index,
 		.pResults           = NULL,
 	};
 	ret = vkQueuePresentKHR(vk.present_queue, &present_info);
@@ -1147,18 +1013,53 @@ void draw_frame()
 	|| ret == VK_SUBOPTIMAL_KHR 
 	|| vk.framebuffer_resize){
 		vk_recreate_swapchain();
-	}else if(ret != VK_SUCCESS){
+	} else if (ret != VK_SUCCESS) {
 		vk.error = "Presentation failure";
 		return;
 	}
-	vk.current_frame = (vk.current_frame+1) % VK_MAX_FRAMES_IN_FLIGHT;
+
+	vk.current_frame = (vk.current_frame+1) % VK_FRAMES;
 }
 
+void gfx_draw_teapots(struct VkFrame *frame)
+{
+	vk_update_object_buffer(frame);
+	if (vk.error) return;
+
+	vk_update_uniform_buffer(frame);
+	if (vk.error) return;
+
+	VkCommandBuffer cmd = frame->cmd_buf;
+
+	vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, vk.pipeline );
+
+	vkCmdBindVertexBuffers(cmd, 0, 1, &vk.vertex_buffer, (VkDeviceSize[]){0});
+	vkCmdBindIndexBuffer(cmd, vk.index_buffer, 0, VK_INDEX_TYPE_UINT16);
+
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, 
+		vk.pipeline_layout,
+		0, 1,
+		&frame->descriptor_set, 0, NULL
+	);
+	
+	for (int i = 0; i < scene.object_num; i++) {
+		uint32_t dynamic_offset = sizeof(struct ObjectUBO)*i;
+		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, 
+			vk.pipeline_layout,
+			1, 1,
+			&frame->object_descriptor_dynamic, 
+			
+			1, 
+			&dynamic_offset
+		);
+
+		vkCmdDrawIndexed(cmd, array_length(pot_index), 1, 0, 0, 0);
+	}
+}
 
 /***********
  * TEXTURE *
  ***********/
-
 
 void vk_create_texture(void)
 {
@@ -1275,7 +1176,6 @@ void vk_create_texture_sampler()
 		vk.error = "Failed to create sampler";
 		return;
 	}
-
 }
 
 
@@ -1298,7 +1198,6 @@ void vk_create_depth_resources()
 		&vk.depth_alloc
 	);
 
-	// Create image view
 	VkImageViewCreateInfo create_info = {
 		.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 		.image    = vk.depth_image,
@@ -1316,6 +1215,7 @@ void vk_create_depth_resources()
 		.subresourceRange.baseArrayLayer = 0,
 		.subresourceRange.layerCount = 1,
 	};
+
 	VkResult ret = vkCreateImageView(vk.dev, &create_info, NULL, &vk.depth_view);
 	if (ret != VK_SUCCESS) {
 		vk.error = "Failed to create depth image view";
@@ -1404,8 +1304,6 @@ int gfx_init(void)
 	vk_create_texture();
 	vk_create_texture_view();
 
-	vk_text_create();
-
 	vk_upload_buffer( 
 		&vk.vertex_buffer, &vk.vertex_alloc,  
 		pot_vertex, array_sizeof(pot_vertex),
@@ -1421,8 +1319,9 @@ int gfx_init(void)
 	vk_create_descriptor_pool();
 	vk_create_sync();
 
-	for(int i = 0; i < VK_MAX_FRAMES_IN_FLIGHT; i++){
+	for(int i = 0; i < VK_FRAMES; i++){
 		vk_init_frame( &vk.frames[i] );
+		vk.frames[i].id = i;
 	}
 	
 	printf("MinAligment %li %% %li = %li \n", 
@@ -1442,17 +1341,9 @@ int gfx_init(void)
 	return 0;
 }
 
-void gfx_tick(void)
-{
-	draw_frame();
-}
-
 void gfx_destroy()
 {
-	if(vk.dev) vkDeviceWaitIdle(vk.dev);
-
 	vk_destroy_swapchain();
-	vk_text_destroy();
 
 	vkDestroySampler(vk.dev, vk.texture_sampler, NULL);
 	
@@ -1466,7 +1357,7 @@ void gfx_destroy()
 
 	vmaDestroyBuffer(vk.vma, vk.index_buffer, vk.index_alloc);
 	
-	for(int i = 0; i < VK_MAX_FRAMES_IN_FLIGHT; i++){
+	for(int i = 0; i < VK_FRAMES; i++){
 		vk_destroy_frame( &vk.frames[i] );
 	}
 

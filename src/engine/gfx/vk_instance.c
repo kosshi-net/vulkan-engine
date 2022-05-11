@@ -11,9 +11,10 @@ extern struct VkEngine vk;
 
 bool vk_instance_ext_check(const char*ext)
 {
-	for( int i = 0; i < array_length(vk.instance_ext_avbl); i++ ){
+	for (int i = 0; i < array_length(vk.instance_ext_avbl); i++) {
 		const char *name = vk.instance_ext_avbl[i].extensionName;
-		if (strcmp(ext, name)==0) goto found;
+		if (strcmp(ext, name)==0) 
+			goto found;
 	}
 	printf("CHECK %s: FAIL\n", ext);
 	return false;
@@ -25,7 +26,6 @@ found:
 
 void vk_instance_ext_get_avbl(void)
 {
-	//vk.instance_ext_req = array_create(sizeof(const char*));
 	array_create(vk.instance_ext_req);
 	array_create(vk.instance_ext_avbl);
 
@@ -54,7 +54,7 @@ void vk_instance_ext_add(const char *ext)
 
 bool vk_validation_check(const char*ext)
 {
-	for( int i = 0; i < array_length(vk.validation_avbl); i++ ){
+	for (int i = 0; i < array_length(vk.validation_avbl); i++) {
 		const char *name = vk.validation_avbl[i].layerName;
 		if (strcmp(ext, name)==0) goto found;
 	}
@@ -68,7 +68,6 @@ found:
 
 void vk_validation_get_avbl(void)
 {
-	//vk.validation_req = array_create(sizeof(const char*));
 	array_create(vk.validation_req);
 	array_create(vk.validation_avbl);
 	uint32_t num;
@@ -78,7 +77,7 @@ void vk_validation_get_avbl(void)
 	void*data = array_reserve(vk.validation_avbl, num);
 	vkEnumerateInstanceLayerProperties(&num, data);
 
-	if(vk._verbose)
+	if (vk._verbose)
 		for( int i = 0; i < array_length(vk.validation_avbl); i++ ){
 			const char *name = vk.validation_avbl[i].layerName;
 			printf("%s\n", name );
@@ -90,12 +89,9 @@ void vk_validation_add(const char *ext)
 	array_push(vk.validation_req, ext);
 }
 
-
-
 /************
  * INSTANCE *
  ************/
-
 
 void vk_create_instance(void)
 {
@@ -107,17 +103,16 @@ void vk_create_instance(void)
 	for(int i = 0; i < glfw_ext_num; i++)
 		vk_instance_ext_add(glfw_ext[i]);
 
-	for( int i = 0; i < array_length(vk.instance_ext_req); i++ )
-		if ( !vk_instance_ext_check(vk.instance_ext_req[i] ) ){
+	for (int i = 0; i < array_length(vk.instance_ext_req); i++)
+		if (!vk_instance_ext_check(vk.instance_ext_req[i])) {
 			vk.error = "Instance extension requirements not met";
 			return;
 		}
-	for( int i = 0; i < array_length(vk.validation_req); i++ )
-		if ( !vk_validation_check(vk.validation_req[i] ) ){
+	for (int i = 0; i < array_length(vk.validation_req); i++)
+		if (!vk_validation_check(vk.validation_req[i])) {
 			vk.error = "Validation requirements not met";
 			return;
 		}
-
 
 	VkApplicationInfo app_info = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,

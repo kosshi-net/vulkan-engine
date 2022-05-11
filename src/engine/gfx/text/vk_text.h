@@ -2,22 +2,37 @@
 
 #include "gfx/gfx_types.h"
 #include "gfx/text/text.h"
+#include "engine.h"
 
+struct VkTextContext {
+	struct {
+		VkBuffer         uniform_buffer;
+		VmaAllocation    uniform_alloc;
+		VkDescriptorSet  descriptor_set;
 
-void vk_text_create_pipeline(void);
-void vk_text_create_renderpass(void);
-void vk_text_create_descriptor_layout(void);
+		VkBuffer         vertex_buffer;
+		VmaAllocation    vertex_alloc;
+		void            *vertex_mapping;
 
-void vk_text_update_uniform_buffer(struct Frame *frame);
+		uint32_t         index_count;
+	} frame[VK_FRAMES];
 
-void vk_text_create(void);
-void vk_text_destroy(void);
+	struct TextContext            *ctx;
 
-void vk_text_create_fbdeps(void);
-void vk_text_destroy_fbdeps(void);
+	VkPipelineLayout               pipeline_layout;
+	VkPipeline                     pipeline;
+	VkDescriptorSetLayout          descriptor_layout;
 
-void vk_text_frame_create (struct Frame *frame);
-void vk_text_frame_destroy(struct Frame *frame);
+	VkBuffer                       index_buffer;
+	VmaAllocation                  index_alloc;
 
-void vk_text_add_ctx(struct TextContext *ctx);
+	VkImage                        texture_image;
+	VkImageView                    texture_view;
+	VmaAllocation                  texture_alloc;
+};
+
+uint32_t gfx_text_renderer_create (struct TextContext *);
+void     gfx_text_renderer_destroy(uint32_t);
+void     gfx_text_draw            (struct Frame*, uint32_t);
+
 

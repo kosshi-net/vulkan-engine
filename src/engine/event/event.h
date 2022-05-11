@@ -2,8 +2,12 @@
 
 enum Event {
 	EVENT_NONE,
+
 	EVENT_WIN_RESIZE,
-	EVENT_COUNT
+	EVENT_VK_SWAPCHAIN_DESTROY,
+	EVENT_VK_SWAPCHAIN_CREATE,
+
+	EVENT_COUNT,
 };
 
 void event_bind  (enum Event e, void(*callback)(void*));

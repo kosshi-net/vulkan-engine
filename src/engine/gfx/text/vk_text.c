@@ -6,6 +6,7 @@
 #include "gfx/vk_util.h"
 #include "res.h"
 #include "gfx/text/text.h"
+#include "event/event.h"
 
 #define TEXT_FRAME_MAX_GLYPHS (1024*4)
 #define TEXT_VERTICES_PER_GLYPH 4
@@ -13,7 +14,8 @@
 
 extern struct VkEngine vk;
 
-static struct TextContext *_txtctx = NULL; // TODO
+static struct VkTextContext vktxtctx[4];
+
 
 static VkVertexInputBindingDescription text_binding = {
 	.binding   = 0,
@@ -21,8 +23,7 @@ static VkVertexInputBindingDescription text_binding = {
 	.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
 };
 
-static VkVertexInputAttributeDescription text_attributes[] =
-{
+static VkVertexInputAttributeDescription text_attributes[] = {
 	{
 		.binding  = 0,
 		.location = 0,
@@ -37,7 +38,7 @@ static VkVertexInputAttributeDescription text_attributes[] =
 	},
 };
 
-void vk_text_create_pipeline()
+void vk_text_create_pipeline(struct VkTextContext *restrict this)
 {
 	if(vk.error) return;
 
@@ -162,7 +163,7 @@ void vk_text_create_pipeline()
 	};
 
 	VkDescriptorSetLayout layouts[] = { 
-		vk.text.descriptor_layout, 
+		this->descriptor_layout, 
 	};
 
 	VkPipelineLayoutCreateInfo pipeline_layout_info = {
@@ -174,7 +175,7 @@ void vk_text_create_pipeline()
 	};
 	
 	VkResult ret = vkCreatePipelineLayout(vk.dev, 
-			&pipeline_layout_info, NULL, &vk.text.pipeline_layout
+			&pipeline_layout_info, NULL, &this->pipeline_layout
 	);
 	if(ret != VK_SUCCESS) {
 		vk.error = "Failed to create pipeline layout";
@@ -193,7 +194,7 @@ void vk_text_create_pipeline()
 		.pDepthStencilState  = &depth_stencil_info,
 		.pColorBlendState    = &blending_info, 
 		.pDynamicState       = NULL,
-		.layout              = vk.text.pipeline_layout,
+		.layout              = this->pipeline_layout,
 		.renderPass          = vk.renderpass,
 		.subpass             = 0,
 		.basePipelineHandle  = VK_NULL_HANDLE,
@@ -201,8 +202,9 @@ void vk_text_create_pipeline()
 	};
 	
 	ret = vkCreateGraphicsPipelines(vk.dev, 
-			VK_NULL_HANDLE, 1, &pipeline_info, NULL, &vk.text.pipeline
-		);
+		VK_NULL_HANDLE, 1, &pipeline_info, NULL, &this->pipeline
+	);
+
 	if(ret != VK_SUCCESS) {
 		vk.error = "Failed to create graphics pipeline";
 		return;
@@ -213,7 +215,7 @@ void vk_text_create_pipeline()
 	return;
 }
 
-void vk_text_create_descriptor_layout()
+void vk_text_create_descriptor_layout(struct VkTextContext *restrict this)
 {
 	if(vk.error) return;
 
@@ -245,7 +247,7 @@ void vk_text_create_descriptor_layout()
 
 	VkResult ret;
 	ret = vkCreateDescriptorSetLayout(vk.dev, 
-		&layout_info, NULL, &vk.text.descriptor_layout
+		&layout_info, NULL, &this->descriptor_layout
 	);
 	if(ret != VK_SUCCESS){
 		vk.error = "Failed to create object descriptor layout";
@@ -253,11 +255,11 @@ void vk_text_create_descriptor_layout()
 	}
 }
 
-void vk_text_update_texture(struct TextContext *ctx)
+void vk_text_update_texture(struct VkTextContext *restrict this)
 {
-	int32_t  texw   = ctx->atlas.w;
-	int32_t  texh   = ctx->atlas.h;
-	uint8_t *pixels = ctx->atlas.bitmap;
+	int32_t  texw   = this->ctx->atlas.w;
+	int32_t  texh   = this->ctx->atlas.h;
+	uint8_t *pixels = this->ctx->atlas.bitmap;
 	VkDeviceSize   image_size = texw * texh * 1;
 
 	vk_create_buffer_vma(
@@ -268,9 +270,7 @@ void vk_text_update_texture(struct TextContext *ctx)
 		&vk.staging_alloc
 	);
 
-
-
-	vk_transition_image_layout(vk.text.texture_image, 
+	vk_transition_image_layout(this->texture_image, 
 		VK_FORMAT_R8_SRGB,
 		VK_IMAGE_LAYOUT_UNDEFINED,
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL
@@ -282,25 +282,24 @@ void vk_text_update_texture(struct TextContext *ctx)
 	memcpy(data, pixels, image_size);
 	vmaUnmapMemory(vk.vma, vk.staging_alloc);
 
-	vk_copy_buffer_to_image(vk.staging_buffer, vk.text.texture_image, texw, texh);
-	vk_transition_image_layout(vk.text.texture_image,
+	vk_copy_buffer_to_image(vk.staging_buffer, this->texture_image, texw, texh);
+	vk_transition_image_layout(this->texture_image,
 		VK_FORMAT_R8_SRGB, 
 		VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
 		VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL
 	);
 
-
 	vmaDestroyBuffer(vk.vma, vk.staging_buffer, vk.staging_alloc);
 
-	ctx->atlas.dirty = false;
+	this->ctx->atlas.dirty = false;
 }
 
-void vk_text_texture(struct TextContext *ctx)
+void vk_text_texture(struct VkTextContext *restrict this)
 {
 	if(vk.error) return;
 
-	int32_t  texw   = ctx->atlas.w;
-	int32_t  texh   = ctx->atlas.h;
+	int32_t  texw   = this->ctx->atlas.w;
+	int32_t  texh   = this->ctx->atlas.h;
 
 	vk_create_image_vma(
 		texw, texh,
@@ -308,17 +307,17 @@ void vk_text_texture(struct TextContext *ctx)
 		VK_IMAGE_TILING_OPTIMAL,
 		VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT,
 		VMA_MEMORY_USAGE_GPU_ONLY,
-		&vk.text.texture_image,
-		&vk.text.texture_alloc
+		&this->texture_image,
+		&this->texture_alloc
 	);
 	
-	vk_text_update_texture(ctx);
+	vk_text_update_texture(this);
 
 	/* view */
 	
 	VkImageViewCreateInfo create_info = {
 		.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
-		.image    = vk.text.texture_image,
+		.image    = this->texture_image,
 		.viewType = VK_IMAGE_VIEW_TYPE_2D,
 		.format   = VK_FORMAT_R8_SRGB,
 
@@ -335,7 +334,7 @@ void vk_text_texture(struct TextContext *ctx)
 	};
 
 	VkResult ret = vkCreateImageView(vk.dev, 
-		&create_info, NULL, &vk.text.texture_view
+		&create_info, NULL, &this->texture_view
 	);
 
 	if(ret != VK_SUCCESS) {
@@ -344,15 +343,77 @@ void vk_text_texture(struct TextContext *ctx)
 	};
 }
 
-void vk_text_create_fbdeps()
+
+
+void vk_text_create_fbdeps(struct VkTextContext *restrict this)
 {
-	vk_text_create_descriptor_layout();
-	vk_text_create_pipeline();
+	vk_text_create_descriptor_layout(this);
+	vk_text_create_pipeline(this);
+}
+void vk_text_destroy_fbdeps(struct VkTextContext *restrict this)
+{
+	vkDestroyPipeline(      vk.dev, this->pipeline, NULL);
+	vkDestroyPipelineLayout(vk.dev, this->pipeline_layout, NULL);
+	vkDestroyDescriptorSetLayout(vk.dev, this->descriptor_layout, NULL);
 }
 
-void vk_text_create(void)
+/************
+ * EXTERNAL *
+ ************/
+
+void gfx_text_renderer_destroy(uint32_t id)
 {
-	vk_text_texture(_txtctx);
+	struct VkTextContext *restrict this = &vktxtctx[id];
+
+	for (int i = 0; i < VK_FRAMES; i++) {
+		vmaUnmapMemory(vk.vma, this->frame[i].vertex_alloc);
+		vmaDestroyBuffer(vk.vma, 
+			this->frame[i].vertex_buffer, 
+			this->frame[i].vertex_alloc
+		);
+
+		vmaDestroyBuffer(vk.vma, 
+			this->frame[i].uniform_buffer, this->frame[i].uniform_alloc
+		);
+	}
+
+	vkDestroyImageView(vk.dev, this->texture_view, NULL);
+	vmaDestroyImage   (vk.vma, this->texture_image, this->texture_alloc);
+	vmaDestroyBuffer  (vk.vma, this->index_buffer,  this->index_alloc);
+
+	vk_text_destroy_fbdeps(this);
+}
+
+static bool callbacks_bound = false;
+void text_swapchain_destroy_callback(void*arg)
+{
+	for (int i = 0; i < 1; i++) 
+		vk_text_destroy_fbdeps(&vktxtctx[i]);
+}
+
+void text_swapchain_create_callback(void*arg)
+{
+	for (int i = 0; i < 1; i++) 
+		vk_text_create_fbdeps(&vktxtctx[i]);
+}
+
+
+uint32_t gfx_text_renderer_create(struct TextContext *txtctx)
+{
+	if (vk.error) return -1; 
+	VkResult ret; 
+
+	if (!callbacks_bound) {
+		event_bind(EVENT_VK_SWAPCHAIN_CREATE, &text_swapchain_create_callback);
+		event_bind(EVENT_VK_SWAPCHAIN_DESTROY,&text_swapchain_destroy_callback);
+		callbacks_bound = true;
+	}
+
+	uint32_t id = 0;
+	struct VkTextContext *this = &vktxtctx[id];
+	this->ctx = txtctx;
+
+	vk_text_texture(this);
 
 	size_t index_buf_size;
 	void  *index_buf = txt_create_shared_index_buffer(
@@ -360,33 +421,18 @@ void vk_text_create(void)
 	);
 
 	vk_upload_buffer( 
-		&vk.text.index_buffer, &vk.text.index_alloc,  
+		&this->index_buffer, &this->index_alloc,  
 		index_buf, index_buf_size, 
 		VK_BUFFER_USAGE_INDEX_BUFFER_BIT
 	);
 
-	vk_text_create_fbdeps();
-}
+	vk_text_create_fbdeps(this);
 
-void vk_text_frame_destroy(struct Frame *frame)
-{
-
-	vmaUnmapMemory(vk.vma, frame->text.vertex_alloc);
-	vmaDestroyBuffer(vk.vma, 
-		frame->text.vertex_buffer, 
-		frame->text.vertex_alloc
-	);
-
-
-}
-
-void vk_text_frame_create(struct Frame *frame)
-{
-	if (vk.error) return; 
-	VkResult ret; 
+	/*****************
+	 * Create frames *
+	 *****************/
 
 	size_t max_vertices = TEXT_FRAME_MAX_GLYPHS * 4;
-	size_t max_indices  = TEXT_FRAME_MAX_GLYPHS * 6;
 	size_t size = max_vertices * sizeof(float) * 6;
 
 	VkBufferCreateInfo buffer_info = {
@@ -403,95 +449,135 @@ void vk_text_frame_create(struct Frame *frame)
 		         VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
 	};
 
-	ret = vmaCreateBuffer(vk.vma, 
-		&buffer_info, &alloc_info, 
-		&frame->text.vertex_buffer, 
-		&frame->text.vertex_alloc, 
-		NULL
-	);
+	for (int i = 0; i < VK_FRAMES; i++) {
+		vk_create_buffer_vma(
+			sizeof(struct TextUBO),
+			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+			VMA_MEMORY_USAGE_CPU_TO_GPU,
+			&this->frame[i].uniform_buffer,
+			&this->frame[i].uniform_alloc
+		);
 
-    if (ret != VK_SUCCESS) {
-		vk.error = "Failed to allocate (vma)";
-		return;
-    }
+		VkDescriptorSetAllocateInfo desc_ainfo = {
+			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
+			.descriptorPool     = vk.descriptor_pool,
+			.descriptorSetCount = 1,
+			.pSetLayouts        = &this->descriptor_layout
+		};
+		ret = vkAllocateDescriptorSets(vk.dev, 
+			&desc_ainfo, &this->frame[i].descriptor_set
+		);
+		if(ret != VK_SUCCESS) goto error;
 
-	size = max_indices * sizeof(uint16_t);
-	buffer_info = (VkBufferCreateInfo){
-		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		.size = size,
-		.usage = VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
-		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-	};
+		VkDescriptorBufferInfo uniform_buffer_info = {
+			.buffer = this->frame[i].uniform_buffer,
+			.offset = 0,
+			.range  = sizeof(struct TextUBO)
+		};
+		VkDescriptorImageInfo uniform_image_info = {
+			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
+			.imageView   = this->texture_view,
+			.sampler     = vk.texture_sampler,
+		};
+		VkWriteDescriptorSet desc_write[] = {
+			{
+				.sType              = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet             = this->frame[i].descriptor_set,
+				.dstBinding         = 0,
+				.dstArrayElement    = 0,
+				.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+				.descriptorCount    = 1,
+				.pBufferInfo        = &uniform_buffer_info,
+				.pImageInfo         = NULL,
+				.pTexelBufferView   = NULL,
+			},
+			{
+				.sType              = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
+				.dstSet             = this->frame[i].descriptor_set,
+				.dstBinding         = 1,
+				.dstArrayElement    = 0,
+				.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+				.descriptorCount    = 1,
+				.pBufferInfo        = NULL,
+				.pImageInfo         = &uniform_image_info,
+				.pTexelBufferView   = NULL,
+			},
+		};
+		vkUpdateDescriptorSets(vk.dev, LENGTH(desc_write), desc_write, 0, NULL);
 
-    if (ret != VK_SUCCESS) {
-		vk.error = "Failed to allocate (vma)";
-		return;
-    }
+		ret = vmaCreateBuffer(vk.vma, 
+			&buffer_info, &alloc_info, 
+			&this->frame[i].vertex_buffer, 
+			&this->frame[i].vertex_alloc, 
+			NULL
+		);
 
-	vmaMapMemory(vk.vma, frame->text.vertex_alloc, &frame->text.vertex_mapping);
-}
-
-void vk_text_destroy_fbdeps()
-{
-	vkDestroyPipeline(      vk.dev, vk.text.pipeline, NULL);
-	vkDestroyPipelineLayout(vk.dev, vk.text.pipeline_layout, NULL);
-	vkDestroyDescriptorSetLayout(vk.dev, vk.text.descriptor_layout, NULL);
-}
-
-void vk_text_destroy(void)
-{
-	vkDestroyImageView(vk.dev, vk.text.texture_view, NULL);
-	vmaDestroyImage( vk.vma, vk.text.texture_image, vk.text.texture_alloc);
-	vmaDestroyBuffer(vk.vma, vk.text.index_buffer,  vk.text.index_alloc);
-}
-
-void vk_text_frame_update(struct Frame *frame)
-{
-	frame->text.index_count = _txtctx->glyph_count * 6;
-
-	memcpy(frame->text.vertex_mapping, 
-		_txtctx->vertex_buffer, 
-		array_sizeof(_txtctx->vertex_buffer)
-	);
-
-	vmaFlushAllocation(vk.vma, frame->text.vertex_alloc, 0, 
-		array_sizeof(_txtctx->vertex_buffer)
-	);
-
-	if (_txtctx->atlas.dirty) {
-		printf("Uploading atlas!\n");
-		vk_text_update_texture(_txtctx);
+		if (ret != VK_SUCCESS) goto error;
+		vmaMapMemory(vk.vma, 
+			this->frame[i].vertex_alloc, 
+			&this->frame[i].vertex_mapping
+		);
 	}
 
+	return id;
+error:
+	vk.error = "Text failed";
+	return -1;
 }
 
 
-void vk_text_update_uniform_buffer(struct Frame *frame)
+void gfx_text_draw(struct Frame *frame, uint32_t id)
 {
 	if(vk.error) return;
+
 	
+	struct VkTextContext *restrict this = &vktxtctx[id];
+	uint32_t f = frame->vk->id;
+
 	struct TextUBO ubo;
 
 	glm_ortho(
 		0.0, vk.swapchain_extent.width,
 		0.0, vk.swapchain_extent.height,
-		
 		-1.0, 1.0,
 		ubo.ortho
 	);
 
 	void *data;
-	vmaMapMemory(vk.vma, frame->text.uniform_alloc, &data);
+	vmaMapMemory(vk.vma, this->frame[f].uniform_alloc, &data);
 	memcpy(data, &ubo, sizeof(ubo));
-	vmaUnmapMemory(vk.vma, frame->text.uniform_alloc);
+	vmaUnmapMemory(vk.vma, this->frame[f].uniform_alloc);
 
-	vk_text_frame_update(frame);
+	this->frame[f].index_count = this->ctx->glyph_count * 6;
+
+	memcpy(this->frame[f].vertex_mapping, 
+		this->ctx->vertex_buffer, 
+		array_sizeof(this->ctx->vertex_buffer)
+	);
+
+	vmaFlushAllocation(vk.vma, this->frame[f].vertex_alloc, 0, 
+		array_sizeof(this->ctx->vertex_buffer)
+	);
+
+	if (this->ctx->atlas.dirty) {
+		printf("Uploading atlas!\n");
+		vk_text_update_texture(this);
+	}
+
+	VkCommandBuffer cmd = frame->vk->cmd_buf;
+
+	vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline );
+
+	vkCmdBindVertexBuffers(cmd, 0, 1, &this->frame[f].vertex_buffer, (VkDeviceSize[]){0});
+	vkCmdBindIndexBuffer(cmd, this->index_buffer, 0, VK_INDEX_TYPE_UINT16);
+
+	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, 
+		this->pipeline_layout,
+		0, 1,
+		&this->frame[f].descriptor_set, 0, NULL
+	);
+
+	vkCmdDrawIndexed(cmd, this->frame[f].index_count, 1,0,0,0);
 }
 
 
-
-void vk_text_add_ctx(struct TextContext *ctx)
-{
-	_txtctx = ctx;
-
-}

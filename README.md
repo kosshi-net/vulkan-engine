@@ -13,13 +13,12 @@ Hello Vulkan! A learner project in C. Aim is to implement a reasonable base for 
 
 ### Text rendering 
 - Good enough unicode support
-- Textured quads - type 
-- Glyph caching system
-- Shaping
+- Textured quads type 
+- Glyph caching system (glyphs rendered with Freetype)
+- Shaping (HarfBuzz)
 - Supports fallback fonts (using a brute force approach)
-- Supports bidirectional text
+- Supports bidirectional text (GNU Fribidi)
 - Rudimentary support for line wrapping and basic layouting (centering, aligning)
-- Libraries used: Harzbuff, Freetype, GNU Fribidi
 - TODO: Color
 - TODO: Italic and bold
 - TODO: Allow centering with block width of 0 (center on ctx cursor)
@@ -38,7 +37,7 @@ https://user-images.githubusercontent.com/19539479/154944471-8bf0f198-ee2f-4e73-
 
 ## To fix (besides the obvious)
 - Handle minUniformBufferOffsetAlignment properly
-	- Temp. patched with __attribute__ aligned 256
+	- Temp. patched with \_\_attribute\_\_ aligned 256
 - Buffers
 	- Stop using depricated VMA usage flags 
 	- Stop recreating the staging buffer
@@ -66,7 +65,7 @@ Clone the following repositories into lib/
 - Freetype
 
 Install the following using your package manager:
-- HarzBuff
+- HarfBuzz
 - GNU Fribidi
 
 Other

@@ -21,7 +21,7 @@ void vk_create_image_vma(
 	VkImage              *image,
 	VmaAllocation        *alloc
 ){
-	if(vk.error) return;
+	if (vk.error) return;
 
 	VkImageCreateInfo image_info = {
 		.sType           = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
@@ -43,7 +43,7 @@ void vk_create_image_vma(
 	};
 
 	VkResult ret = vmaCreateImage(vk.vma, &image_info, &alloc_info, image, alloc, NULL);
-	if(ret){
+	if (ret) {
 		vk.error = "Texture image creation failed (vma)";
 		return;
 	}
@@ -56,7 +56,7 @@ void vk_create_buffer_vma(
 	VkBuffer             *buffer, 
 	VmaAllocation        *alloc
 ){
-	if(vk.error) return;
+	if (vk.error) return;
 	VkResult ret;
 
     VkBufferCreateInfo buffer_info = {
@@ -100,7 +100,7 @@ void vk_upload_buffer(
 	size_t         size,
 	enum VkBufferUsageFlagBits usage
 ){
-	if(vk.error) return;
+	if (vk.error) return;
 
 	vk_create_buffer_vma(
 		size,
@@ -124,7 +124,7 @@ void vk_upload_buffer(
 		buffer,
 		alloc
 	);
-	if(vk.error) return;
+	if (vk.error) return;
 
 	vk_copy_buffer(vk.staging_buffer, *buffer, size);
 	vmaDestroyBuffer(vk.vma, vk.staging_buffer, vk.staging_alloc);
@@ -171,19 +171,13 @@ void vk_end_commands(VkCommandBuffer cmdbuf)
 	vkFreeCommandBuffers(vk.dev, vk.cmd_pool, 1, &cmdbuf);
 }
 
-
-
-
-
-
 VkFormat vk_find_supported_format( 
 	VkFormat *formats,
 	size_t    formats_num,
 	VkImageTiling tiling, 
 	VkFormatFeatureFlags features 
 ){
-	
-	for(int i = 0; i < formats_num; i++){
+	for (int i = 0; i < formats_num; i++){
 		VkFormatProperties props;
 		vkGetPhysicalDeviceFormatProperties(vk.dev_physical, formats[i], &props);
 
@@ -224,7 +218,7 @@ VkFormat vk_find_depth_format()
 
 VkShaderModule vk_create_shader_module(enum Resource file)
 {
-	if(vk.error) return NULL;
+	if (vk.error) return NULL;
 
 	size_t spv_size;
 	char  *spv = res_file(file, &spv_size);
@@ -285,8 +279,8 @@ void vk_transition_image_layout(
 	VkPipelineStageFlags src_stage;
 	VkPipelineStageFlags dst_stage;
 
-	if( old_layout == VK_IMAGE_LAYOUT_UNDEFINED 
-	&&  new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL ) 
+	if (old_layout == VK_IMAGE_LAYOUT_UNDEFINED 
+	 && new_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL ) 
 	{
 		barrier.srcAccessMask = 0;
 		barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
@@ -294,16 +288,14 @@ void vk_transition_image_layout(
 		dst_stage             = VK_PIPELINE_STAGE_TRANSFER_BIT;
 	} 
 	else 
-	if( old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL 
-	&&  new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) 
+	if (old_layout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL 
+	 && new_layout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL ) 
 	{
 		barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
 		barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
 		src_stage             = VK_PIPELINE_STAGE_TRANSFER_BIT;
 		dst_stage             = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
-	}
-	else 
-	{
+	} else {
 		vk.error = "Unsupported layout transition";
 		return;
 	}

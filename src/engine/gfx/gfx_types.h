@@ -9,8 +9,7 @@
 
 #include "array.h"
 
-#define VK_MAX_FRAMES_IN_FLIGHT 3
-
+#define VK_FRAMES 3
 
 struct SceneUBO {
 	mat4 view;
@@ -26,7 +25,9 @@ struct TextUBO {
 	mat4 ortho;
 };
 
-struct Frame {
+struct VkFrame {
+	uint32_t         id;
+
 	VkSemaphore      image_available;
 	VkSemaphore      render_finished;
 	VkFence          flight;
@@ -44,30 +45,13 @@ struct Frame {
 	VkBuffer         uniform_buffer;
 	VmaAllocation    uniform_alloc;
 
-	struct {
-		VkBuffer         uniform_buffer;
-		VmaAllocation    uniform_alloc;
-		VkDescriptorSet  descriptor_set;
-
-		// Dynamic geometry
-		VkBuffer         vertex_buffer;
-		VmaAllocation    vertex_alloc;
-		void            *vertex_mapping;
-
-		uint32_t         index_count;
-
-	} text;
+	uint32_t         image_index;
 };
 
 struct VkEngine {
 	const char                    *error;
 	bool                           _verbose;
 	GLFWwindow                    *window;
-
-	double                         delta;
-	double                         sleep;
-	uint32_t                       fps;
-	uint32_t                       fps_max;
 
 	double                         last_resize;
 
@@ -80,9 +64,9 @@ struct VkEngine {
 	VkPhysicalDevice               dev_physical;
 	VkPhysicalDeviceProperties     dev_properties;
 
-	struct Frame                   frames[VK_MAX_FRAMES_IN_FLIGHT];
+	struct VkFrame                 frames[VK_FRAMES];
 	
-	// Non-rendering only
+	/* Primarily used for staging */
 	VkCommandPool   cmd_pool;      
 
 	uint32_t                       family_graphics;
@@ -142,19 +126,5 @@ struct VkEngine {
 
 	Array(VkLayerProperties)       validation_avbl;
 	Array(const char*)             validation_req;
-
-	struct {
-		VkPipelineLayout               pipeline_layout;
-		VkPipeline                     pipeline;
-		VkDescriptorSetLayout          descriptor_layout;
-
-		VkBuffer                       index_buffer;
-		VmaAllocation                  index_alloc;
-
-		VkImage                        texture_image;
-		VkImageView                    texture_view;
-		VmaAllocation                  texture_alloc;
-	} text;
-
 };
 
