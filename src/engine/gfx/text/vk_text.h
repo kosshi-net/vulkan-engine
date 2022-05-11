@@ -4,8 +4,12 @@
 #include "gfx/text/text.h"
 #include "engine.h"
 
+struct TextUBO {
+	mat4 ortho;
+};
+
 struct VkTextContext {
-	struct {
+	struct TextFrameData {
 		VkBuffer         uniform_buffer;
 		VmaAllocation    uniform_alloc;
 		VkDescriptorSet  descriptor_set;

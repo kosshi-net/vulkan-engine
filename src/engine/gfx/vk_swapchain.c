@@ -200,10 +200,6 @@ void vk_create_image_views(void)
 
 void vk_destroy_swapchain()
 {
-	printf("Free pipeline\n");
-	vkDestroyPipeline(vk.dev, vk.pipeline, NULL);
-	printf("Free pipeline layout\n");
-	vkDestroyPipelineLayout(vk.dev, vk.pipeline_layout, NULL);
 	printf("Free render pass\n");
     vkDestroyRenderPass(vk.dev, vk.renderpass, NULL);
 

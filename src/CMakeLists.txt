@@ -18,6 +18,7 @@ add_executable( engine
 	engine/gfx/vk_swapchain.c
 	engine/gfx/text/vk_text.c
 	engine/gfx/text/text.c
+	engine/gfx/teapot/teapot.c
 	engine/gfx/vma.cpp
 )
 

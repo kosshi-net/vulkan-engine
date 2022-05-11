@@ -6,6 +6,13 @@
 
 #include "gfx/gfx_types.h"
 
+/* Place header-only library implementations here */
+
+#define STB_IMAGE_IMPLEMENTATION
+#include <stb_image.h>
+
+
+
 
 extern struct VkEngine vk;
 

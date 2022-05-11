@@ -11,6 +11,3 @@ gfx_frame_get(void);
 
 void 
 gfx_frame_submit(struct VkFrame *);
-
-void
-gfx_draw_teapots(struct VkFrame *);

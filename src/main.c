@@ -5,10 +5,12 @@
 #include "engine/engine.h"
 
 #include "engine/win/win.h"
+
+#include "engine/gfx/gfx.h"
+#include "engine/gfx/teapot/teapot.h"
 #include "engine/gfx/text/text.h"
 #include "engine/gfx/text/vk_text.h"
 
-#include "engine/gfx/gfx.h"
 
 static char teapasta[] = "Teapot\nteapot is a vessel used for steeping tea leaves or a herbal mix in boiling or near-boiling water, and for serving the resulting infusion which is called tea. It is one of the core components of teaware. Dry tea is available either in tea bags or as loose tea, in which case a tea infuser or tea strainer may be of some assistance, either to hold the leaves as they steep or to catch the leaves inside the teapot when the tea is poured. Teapots usually have an opening with a lid at their top, where the dry tea and hot water are added, a handle for holding by hand and a spout through which the tea is served. Some teapots have a strainer built-in on the inner edge of the spout. A small air hole in the lid is often created to stop the spout from dripping and splashing when tea is poured. In modern times, a thermally insulating cover called a tea cosy may be used to enhance the steeping process or to prevent the contents of the teapot from cooling too rapidly.\n";
 
@@ -55,6 +57,9 @@ int main(int argc, char**argv)
 
 	txt.gfx = gfx_text_renderer_create(txt.ctx);
 
+	uint32_t teagfx= gfx_teapot_renderer_create();
+
+
 	uint32_t frames = 0;
 	uint32_t fps_max = 300;
 	uint32_t fps = 0;
@@ -90,7 +95,9 @@ int main(int argc, char**argv)
 		txtctx_add(txt.ar);
 
 		struct Frame *frame = frame_begin();
-		gfx_draw_teapots(frame->vk);
+
+		gfx_teapot_draw(frame);
+		
 		gfx_text_draw(frame, txt.gfx);
 		frame_end(frame);
 
@@ -105,6 +112,7 @@ int main(int argc, char**argv)
 
 	engine_wait_idle();
 
+	gfx_teapot_renderer_destroy(teagfx);
 	gfx_text_renderer_destroy(txt.gfx);
 
 	engine_destroy();

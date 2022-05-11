@@ -20,11 +20,6 @@ struct ObjectUBO {
 	mat4 model;
 } __attribute__ ((aligned ((256)))) ;
 
-
-struct TextUBO {
-	mat4 ortho;
-};
-
 struct VkFrame {
 	uint32_t         id;
 
@@ -34,16 +29,6 @@ struct VkFrame {
 	
 	VkCommandPool    cmd_pool;
 	VkCommandBuffer  cmd_buf;
-
-	uint32_t         object_num;
-	VkDescriptorSet *object_descriptors;
-	VkDescriptorSet  object_descriptor_dynamic;
-	VkBuffer         object_buffer;
-	VmaAllocation    object_alloc;
-
-	VkDescriptorSet  descriptor_set;
-	VkBuffer         uniform_buffer;
-	VmaAllocation    uniform_alloc;
 
 	uint32_t         image_index;
 };
@@ -55,6 +40,9 @@ struct VkEngine {
 
 	double                         last_resize;
 
+
+	/* Core resources */
+
 	VmaAllocator                   vma;
 
 	VkInstance                     instance;
@@ -64,16 +52,25 @@ struct VkEngine {
 	VkPhysicalDevice               dev_physical;
 	VkPhysicalDeviceProperties     dev_properties;
 
-	struct VkFrame                 frames[VK_FRAMES];
-	
-	/* Primarily used for staging */
-	VkCommandPool   cmd_pool;      
-
 	uint32_t                       family_graphics;
 	bool                           family_graphics_valid;
 
 	uint32_t                       family_presentation;
 	bool                           family_presentation_valid;
+
+	Array(VkExtensionProperties)   instance_ext_avbl;
+	Array(const char*)             instance_ext_req;
+
+	Array(VkExtensionProperties)   device_ext_avbl;
+	Array(const char*)             device_ext_req;
+
+	Array(VkLayerProperties)       validation_avbl;
+	Array(const char*)             validation_req;
+
+
+	/* Swapchain resources */
+
+	struct VkFrame                 frames[VK_FRAMES];
 
 	VkSwapchainKHR                 swapchain;
 	VkImage                       *swapchain_img;
@@ -86,14 +83,6 @@ struct VkEngine {
 	VmaAllocation                  depth_alloc;
 	VkImageView                    depth_view;
 
-	VkDescriptorSetLayout          descriptor_set_layout;
-	VkDescriptorSetLayout          object_descriptor_layout;
-	VkDescriptorPool               descriptor_pool;
-
-	VkPipelineLayout               pipeline_layout;
-	VkRenderPass                   renderpass;
-	VkPipeline                     pipeline;
-
 	uint32_t                       framebuffers_num;
 	VkFramebuffer                 *framebuffers;
 	bool                           framebuffer_resize;
@@ -104,27 +93,16 @@ struct VkEngine {
 	VkFence                       *fence_image;
 	uint32_t                       current_frame;
 
-	VkBuffer                       vertex_buffer;
-	VmaAllocation                  vertex_alloc;
 
-	VkBuffer                       index_buffer;
-	VmaAllocation                  index_alloc;
+	/* Shared resources */
+
+	VkCommandPool                  cmd_pool;  /* Primarily used for staging */
 
 	VkBuffer                       staging_buffer;
 	VmaAllocation                  staging_alloc;
 
-	VkImage                        texture_image;
+	VkRenderPass                   renderpass;
 	VkSampler                      texture_sampler;
-	VkImageView                    texture_view;
-	VmaAllocation                  texture_alloc;
-
-	Array(VkExtensionProperties)   instance_ext_avbl;
-	Array(const char*)             instance_ext_req;
-
-	Array(VkExtensionProperties)   device_ext_avbl;
-	Array(const char*)             device_ext_req;
-
-	Array(VkLayerProperties)       validation_avbl;
-	Array(const char*)             validation_req;
+	VkDescriptorPool               descriptor_pool;
 };
 
