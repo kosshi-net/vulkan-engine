@@ -3,8 +3,10 @@
 #include "input.h"
 #include "gfx/camera.h"
 
-void freecam_update(struct Freecam *restrict freecam, double delta)
-{
+void freecam_update(
+	struct Freecam *restrict freecam, 
+	double delta 
+){
 	/* Rotation */
 	const double sens = 0.1;
 	double cx, cy;

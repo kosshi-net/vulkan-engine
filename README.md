@@ -20,7 +20,6 @@ Hello Vulkan! A learner project in C. Aim is to implement a reasonable base for 
 - Rudimentary support for line wrapping and basic layouting (centering, aligning)
 - TODO: Color
 - TODO: Italic and bold
-- TODO: Allow centering with block width of 0 (center on ctx cursor)
 - TODO: Vertical text
 - TODO: Cursor
 

@@ -41,20 +41,10 @@ int main(int argc, char**argv)
 	);
 	txtctx_add(txt.hello);
 
-	txt.ctl_head = txtblk_create(txt.ctx, NULL);
-	txt.ctl_head->max_width = txt.ctl_width;
-	txt.ctl_head->align = TEXT_ALIGN_CENTER;
-
-	txt.ctl_right = txtblk_create(txt.ctx, NULL);
-	txt.ctl_right->max_width = txt.ctl_width;
-	txt.ctl_right->align = TEXT_ALIGN_RIGHT;
-
-	txt.ctl_left = txtblk_create(txt.ctx, NULL);
-	txt.ctl_left->max_width = txt.ctl_width;
-	txt.ctl_left->align = TEXT_ALIGN_LEFT;
-	
-	txtblk_edit(txt.ctl_head, "Controls");
-	txtblk_edit(txt.ctl_left,
+	txt.ctl_head = txtblk_create(txt.ctx, 
+		"Controls"
+	);
+	txt.ctl_left = txtblk_create(txt.ctx, 
 		"\n"
 		"Exit\n"
 		"Lock cursor\n"
@@ -64,7 +54,7 @@ int main(int argc, char**argv)
 		"Down\n"
 		"Zoom\n"
 	);
-	txtblk_edit(txt.ctl_right,
+	txt.ctl_right = txtblk_create(txt.ctx, 
 		"\n"
 		"Q\n"
 		"MB1\n"
@@ -74,6 +64,11 @@ int main(int argc, char**argv)
 		"RShift\n"
 		"ZX\n"
 	);
+
+	txtblk_align(txt.ctl_head,  TEXT_ALIGN_CENTER, txt.ctl_width);
+	txtblk_align(txt.ctl_right, TEXT_ALIGN_RIGHT,  txt.ctl_width);
+	txtblk_align(txt.ctl_left,  TEXT_ALIGN_LEFT,   txt.ctl_width);
+
 	txt.gfx = gfx_text_renderer_create(txt.ctx);
 
 	uint32_t teagfx= gfx_teapot_renderer_create();

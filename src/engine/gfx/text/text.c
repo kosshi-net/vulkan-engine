@@ -495,14 +495,34 @@ void txtblk_edit(struct TextBlock *restrict block, char*utf8)
 		block->ctx, block->utf32, 
 		0, array_length(block->utf32)-1
 	);
+	block->aligned = false;
 	
-	/* Post-processing, justification */
+	txtblk_align(block, block->align, block->max_width);
+}
 
-	/* Alignment not possible if max_width is not set */
-	if (block->max_width == 0) return;
-		
-	/* Line breaking */
-	{
+void*txtblk_destroy(struct TextBlock *block)
+{
+	txtblk_unreference_slots(block);
+
+	array_delete(block->quads);
+	array_delete(block->utf32);
+	free(block);
+	return NULL;
+}
+
+
+void txtblk_align(
+	struct TextBlock*block, 
+	enum TextAlign _align, 
+	uint32_t _width
+){
+	block->align     = _align;
+	block->max_width = _width;
+
+	txtblk_unalign(block);
+	block->aligned = true;
+
+	if (block->max_width != 0) {
 		struct GlyphQuad *last = NULL;
 		int32_t cursor_x = 0;
 		int32_t cursor_word = 0;
@@ -520,6 +540,7 @@ void txtblk_edit(struct TextBlock *restrict block, char*utf8)
 
 			if (cursor_x+cursor_word >= block->max_width && last) {
 				last->newline = true;
+				last->alignment_newline = true;
 				cursor_x = cursor_word;
 				cursor_word = 0;
 				continue;
@@ -533,8 +554,9 @@ void txtblk_edit(struct TextBlock *restrict block, char*utf8)
 		}
 	}
 
-	if (block->align == TEXT_ALIGN_RIGHT || block->align == TEXT_ALIGN_CENTER){
-
+	if (block->align == TEXT_ALIGN_RIGHT 
+	 || block->align == TEXT_ALIGN_CENTER
+	){
 		int32_t  line_width = 0;
 		uint32_t line_start = 0;
 
@@ -542,15 +564,18 @@ void txtblk_edit(struct TextBlock *restrict block, char*utf8)
 			struct GlyphQuad *quad = block->quads+g;
 
 			if (quad->newline || g+1 == array_length(block->quads)) {
-				uint32_t offset = block->max_width - line_width - 2;
+				int32_t offset = block->max_width - line_width - 2;
 
 				if (block->align == TEXT_ALIGN_CENTER) {
-					offset = offset / 2.0;
+					offset = offset * 0.5;
+					printf("Offset %i\n", offset);
 				}
 
-				for (int j = line_start; j < g+1; j++) 
-					block->quads[j].offset_x+=offset;
-				
+				for (int j = line_start; j < g+1; j++) {
+					block->quads[j].offset_x   += offset;
+					block->quads[j].alignment_x = offset;
+				}
+
 				line_start = g;
 				line_width = 0;
 				continue;
@@ -560,14 +585,27 @@ void txtblk_edit(struct TextBlock *restrict block, char*utf8)
 	}
 }
 
-void txtblk_destroy(struct TextBlock **block)
-{
-	txtblk_unreference_slots(*block);
 
-	array_delete(block[0]->quads);
-	array_delete(block[0]->utf32);
-	free(block[0]);
-	*block = NULL;
+void txtblk_unalign( struct TextBlock *restrict block)
+{
+	if (!block->aligned) 
+		return;
+
+	block->aligned = false;
+	for (int g = 0; g < array_length(block->quads); g++) {
+		struct GlyphQuad *quad = block->quads+g;
+		
+		if (quad->alignment_newline) {
+			quad->newline           = false;
+			quad->alignment_newline = false;
+		}
+
+		quad->offset_x -= quad->alignment_x;
+		quad->offset_y -= quad->alignment_y;
+
+		quad->alignment_x = 0;
+		quad->alignment_y = 0;
+	}
 }
 
 void txtblk_set_alignment( struct TextBlock *block,  enum TextAlign align, uint32_t max_width )
@@ -670,11 +708,4 @@ uint16_t *txt_create_shared_index_buffer(size_t max_glyphs, size_t *size)
 
 	return buffer;
 }
-
-void text_test(void)
-{
-
-}
-
-
 
