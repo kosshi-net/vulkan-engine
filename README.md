@@ -2,7 +2,6 @@
 
 Hello Vulkan! A learner project in C. Aim is to implement a reasonable base for a game engine.
 
-
 ## Current features
 ### General
 - Able to load and draw .obj models
@@ -57,19 +56,17 @@ https://user-images.githubusercontent.com/19539479/154944471-8bf0f198-ee2f-4e73-
 Not tested but should be trivial with MinGW64
 
 ## Dependencies
-Clone the following repositories into lib/
+Clone the following repositories or files into lib/
 - glfw
 - cglm
 - VulkanMemoryAllocator
 - fast_obj
 - Freetype
+- stb/stb_image.h
 
 Install the following using your package manager:
 - HarfBuzz
 - GNU Fribidi
-
-Other
-- stb/stb_image.h
 
 # License
 MIT

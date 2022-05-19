@@ -1,7 +1,9 @@
-#ifndef GFX_PPM_H
-#define GFX_PPM_H 1
+#pragma once
 
-// width, heigth, buffer
-void gfx_util_write_ppm( int, int, unsigned char*, char* );
+void gfx_util_write_ppm(
+	const int width, 
+	const int height, 
+	unsigned char *buffer, 
+	char *filename
+);
 
-#endif 

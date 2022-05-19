@@ -3,6 +3,16 @@
 #include "gfx/gfx.h"
 #include "engine.h"
 
+struct SceneUBO {
+	mat4 view;
+	mat4 proj;
+};
+
+struct ObjectUBO {
+	mat4 model;
+} __attribute__ ((aligned ((256)))) ;
+
+
 struct TeapotRenderer {
 
 	struct TeapotFrameData {
@@ -39,3 +49,4 @@ struct TeapotRenderer {
 uint32_t gfx_teapot_renderer_create(void);
 void     gfx_teapot_draw(struct Frame *);
 void     gfx_teapot_renderer_destroy(uint32_t);
+

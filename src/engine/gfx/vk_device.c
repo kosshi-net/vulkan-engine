@@ -7,12 +7,9 @@
 
 extern struct VkEngine vk;
 
-
-
 /**************
  * EXTENSIONS *
  **************/
-
 
 bool vk_device_ext_check(const char*ext)
 {
@@ -35,7 +32,6 @@ void vk_device_ext_add(const char *ext)
 
 	array_push(vk.device_ext_req, ext);
 }
-
 
 
 bool vk_device_ext_satisfied(VkPhysicalDevice dev)
@@ -97,7 +93,6 @@ void vk_find_family_indices(VkPhysicalDevice device)
 
 	}
 }
-
 
 
 void vk_select_gpu(void)
@@ -220,7 +215,4 @@ VkDevice vk_create_device()
 
 	return dev;
 }
-
-
-
 

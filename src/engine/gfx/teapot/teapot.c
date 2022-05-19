@@ -1,6 +1,7 @@
 #include "gfx/gfx.h"
 #include "gfx/vk_util.h"
 #include "gfx/teapot/teapot.h"
+#include "gfx/camera.h"
 #include "common.h"
 #include "array.h"
 #include "event/event.h"
@@ -557,8 +558,8 @@ void vk_update_object_buffer(struct TeapotFrameData *frame)
 
 		float t = now*0.3;
 		float x = sin(t+i*0.7)*5.0;
-		float y = cos(t+i*0.7)*5.0;
-		float z = s[8]+1.5;
+		float z = cos(t+i*0.7)*5.0;
+		float y = s[8]+1.5;
 
 		glm_translate_x(model, x);
 		glm_translate_y(model, y);
@@ -607,28 +608,12 @@ void vk_update_object_buffer(struct TeapotFrameData *frame)
 	free(object_buffer);
 }
 
-void vk_update_uniform_buffer(struct TeapotFrameData *frame)
+void vk_update_uniform_buffer(struct TeapotFrameData *frame, struct Camera *camera)
 {
 	if(vk.error) return;
 
-	glm_mat4_identity(scene_ubo.view);
-	glm_mat4_identity(scene_ubo.proj);
-
-	glm_perspective(
-		glm_rad(45.0f), 
-		vk.swapchain_extent.width / (float) vk.swapchain_extent.height,
-		0.1f, 1000.0f,
-		scene_ubo.proj
-	);
-
-	glm_lookat( 
-		(vec4){0.0f, 10.0f, 10.0f},
-		(vec4){0.0f, 0.0f, 0.0f},
-		(vec4){0.0f, 0.0f, 1.0f},
-		scene_ubo.view
-	);
-
-	scene_ubo.proj[1][1] *= -1; // ????
+	glm_mat4_copy(camera->view,       scene_ubo.view);
+	glm_mat4_copy(camera->projection, scene_ubo.proj);
 
 	void *data;
 	vmaMapMemory(vk.vma, frame->uniform_alloc, &data);
@@ -643,7 +628,7 @@ void gfx_teapot_draw(struct Frame *restrict engine_frame)
 	vk_update_object_buffer(frame);
 	if (vk.error) return;
 
-	vk_update_uniform_buffer(frame);
+	vk_update_uniform_buffer(frame, &engine_frame->camera);
 	if (vk.error) return;
 
 	VkCommandBuffer cmd = engine_frame->vk->cmd_buf;

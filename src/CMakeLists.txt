@@ -2,6 +2,8 @@ include_directories	(engine)
 
 add_executable( engine
 	main.c
+	input.c
+	freecam.c
 
 	engine/engine.c
 	engine/res.c
@@ -12,6 +14,7 @@ add_executable( engine
 	engine/win/win.c
 
 	engine/gfx/gfx.c
+
 	engine/gfx/vk_util.c
 	engine/gfx/vk_instance.c
 	engine/gfx/vk_device.c
@@ -23,7 +26,7 @@ add_executable( engine
 )
 
 target_compile_options( engine PUBLIC
-	"-O3"
+	"-O1"
 	#"-mavx2"
 	#"-ffast-math"
 	#"-march=native"

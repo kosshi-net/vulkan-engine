@@ -28,14 +28,15 @@ struct ARR_Head {
 	uint8_t data[];
 };
 
-
 #define array_create(arr) ARR_create(&arr, sizeof(typeof(*arr)))
 static inline int ARR_create(void*p, size_t item_size)
 {
 	size_t max = 2;
 	struct ARR_Head *arr = ARR_malloc(sizeof(struct ARR_Head)+item_size*max);
-	if (arr==NULL) 
+	if (arr==NULL) {
+		*(void**)p = NULL;
 		return 1;
+	}
 	arr->length     = 0;
 	arr->length_max = max;
 	arr->item_size = item_size;
@@ -70,8 +71,7 @@ static inline int ARR_shrink(void*p)
 {
 	struct ARR_Head *arr = ARR_get_header(p);
 	arr->length_max = arr->length;
-	ARR_resize(&arr, arr->length);
-	return 0;
+	return ARR_resize(&arr, arr->length);
 }
 
 #define array_push(arr, ...) ARR_push(&arr,(typeof(*arr)[1]){__VA_ARGS__})

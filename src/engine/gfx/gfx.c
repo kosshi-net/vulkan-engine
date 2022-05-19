@@ -576,14 +576,6 @@ int gfx_init(void)
 		vk_init_frame( &vk.frames[i] );
 		vk.frames[i].id = i;
 	}
-	
-	printf("MinAligment %li %% %li = %li \n", 
-		sizeof(struct ObjectUBO),
-		vk.dev_properties.limits.minUniformBufferOffsetAlignment, 
-		
-		sizeof(struct ObjectUBO) %
-		vk.dev_properties.limits.minUniformBufferOffsetAlignment 
-	);
 
 	if(vk.error){
 		printf("Vulkan error: %s\n", vk.error);
@@ -617,3 +609,4 @@ void gfx_destroy()
 	printf("Free ins\n");
 	vkDestroyInstance(vk.instance, NULL);
 }
+

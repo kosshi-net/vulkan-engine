@@ -29,7 +29,14 @@ bool win_should_close(void)
 	return glfwWindowShouldClose(win);
 }
 
+void win_close(void)
+{
+	glfwSetWindowShouldClose(win, GLFW_TRUE);
+}
+
 GLFWwindow * win_get(void)
 {
 	return win;
 }
+
+

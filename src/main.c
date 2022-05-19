@@ -1,64 +1,82 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
 
 #include "engine/engine.h"
 
 #include "engine/win/win.h"
 
 #include "engine/gfx/gfx.h"
+#include "engine/gfx/camera.h"
 #include "engine/gfx/teapot/teapot.h"
 #include "engine/gfx/text/text.h"
 #include "engine/gfx/text/vk_text.h"
 
-
-static char teapasta[] = "Teapot\nteapot is a vessel used for steeping tea leaves or a herbal mix in boiling or near-boiling water, and for serving the resulting infusion which is called tea. It is one of the core components of teaware. Dry tea is available either in tea bags or as loose tea, in which case a tea infuser or tea strainer may be of some assistance, either to hold the leaves as they steep or to catch the leaves inside the teapot when the tea is poured. Teapots usually have an opening with a lid at their top, where the dry tea and hot water are added, a handle for holding by hand and a spout through which the tea is served. Some teapots have a strainer built-in on the inner edge of the spout. A small air hole in the lid is often created to stop the spout from dripping and splashing when tea is poured. In modern times, a thermally insulating cover called a tea cosy may be used to enhance the steeping process or to prevent the contents of the teapot from cooling too rapidly.\n";
+#include "input.h"
+#include "freecam.h"
 
 int main(int argc, char**argv)
 {
 	engine_init();
+	input_init();
 
 	struct {
 		struct TextContext *ctx;
 		uint32_t            gfx;
 		struct TextBlock   *hello;
 		struct TextBlock   *stats;
+		struct TextBlock   *cam;
 		struct TextBlock   *tea;
-		struct TextBlock   *al;
-		struct TextBlock   *ac;
-		struct TextBlock   *ar;
-	} txt;
+		struct TextBlock   *ctl_head;
+		struct TextBlock   *ctl_right;
+		struct TextBlock   *ctl_left;
+		int                 ctl_width;
+	} txt = {
+		.ctl_width = 150
+	};
 
 	txt.ctx   = txtctx_create();
 	txt.hello = txtblk_create(txt.ctx, "Hello Vulkan!\n");
 	txt.stats = txtblk_create(txt.ctx, NULL);
+	txt.cam   = txtblk_create(txt.ctx, NULL);
 	txt.tea   = txtblk_create(txt.ctx, 
 		"Teapot ティーポット чайник ابريق الشاي 茶壶 קוּמקוּם τσαγιέρα\n"
 	);
-
-
-	txt.al = txtblk_create(txt.ctx, NULL);
-	txt.ac = txtblk_create(txt.ctx, NULL);
-	txt.ar = txtblk_create(txt.ctx, NULL);
-
-	txt.al->max_width = 800;
-	txt.ac->max_width = 800;
-	txt.ar->max_width = 800;
-
-	txt.al->align = TEXT_ALIGN_LEFT;
-	txt.ac->align = TEXT_ALIGN_CENTER;
-	txt.ar->align = TEXT_ALIGN_RIGHT;
-
-	txtblk_edit(txt.al, teapasta);
-	txtblk_edit(txt.ac, teapasta);
-	txtblk_edit(txt.ar, teapasta);
-
 	txtctx_add(txt.hello);
 
+	txt.ctl_head = txtblk_create(txt.ctx, NULL);
+	txt.ctl_head->max_width = txt.ctl_width;
+	txt.ctl_head->align = TEXT_ALIGN_CENTER;
+
+	txt.ctl_right = txtblk_create(txt.ctx, NULL);
+	txt.ctl_right->max_width = txt.ctl_width;
+	txt.ctl_right->align = TEXT_ALIGN_RIGHT;
+
+	txt.ctl_left = txtblk_create(txt.ctx, NULL);
+	txt.ctl_left->max_width = txt.ctl_width;
+	txt.ctl_left->align = TEXT_ALIGN_LEFT;
+	
+	txtblk_edit(txt.ctl_head, "Controls");
+	txtblk_edit(txt.ctl_left,
+		"\n"
+		"Exit\n"
+		"Lock cursor\n"
+		"Unlock cursor\n"
+		"Move\n"
+		"Up\n"
+		"Down\n"
+		"Zoom\n"
+	);
+	txtblk_edit(txt.ctl_right,
+		"\n"
+		"Q\n"
+		"MB1\n"
+		"ESC\n"
+		"WASD\n"
+		"Space\n"
+		"RShift\n"
+		"ZX\n"
+	);
 	txt.gfx = gfx_text_renderer_create(txt.ctx);
 
 	uint32_t teagfx= gfx_teapot_renderer_create();
-
 
 	uint32_t frames = 0;
 	uint32_t fps_max = 300;
@@ -66,7 +84,14 @@ int main(int argc, char**argv)
 	double   last_title = 0.0;
 	double   last = 0;
 	double   sleep = 0;
+
+	static struct Freecam freecam = {
+		.fov = 90.0,
+	};
+
 	while (!win_should_close()) {
+		
+		struct Frame *frame = frame_begin();
 		
 		double now   = glfwGetTime();
 		double delta = now - last; 
@@ -79,28 +104,45 @@ int main(int argc, char**argv)
 		}
 
 		txtctx_clear(txt.ctx);
-
 		char print[1024];
 		snprintf(print, sizeof(print), "FPS: %i/%i, sleeped %.2fms, busy %.2fms\n",
 			fps, fps_max, sleep*1000.0, (delta-sleep)*1000.0
 		);
 		txtblk_edit(txt.stats, print);
+		snprintf(print, sizeof(print), "[%.2f, %.2f, %.2f], [%.1f, %.1f], [%.1f]\n",
+			freecam.pos[0], freecam.pos[1], freecam.pos[2], 
+			freecam.yaw, freecam.pitch,
+			freecam.fov
+		);
+		txtblk_edit(txt.cam, print);
 
 		txtctx_add(txt.hello);
 		txtctx_add(txt.stats);
 		txtctx_add(txt.tea);
+		txtctx_add(txt.cam);
 
-		txtctx_add(txt.al);
-		txtctx_add(txt.ac);
-		txtctx_add(txt.ar);
+		txtctx_set_root(txt.ctx, frame->width-txt.ctl_width, 0);
+		txtctx_add(txt.ctl_head);
+		txtctx_set_root(txt.ctx, frame->width-txt.ctl_width, 0);
+		txtctx_add(txt.ctl_right);
+		txtctx_set_root(txt.ctx, frame->width-txt.ctl_width, 0);
+		txtctx_add(txt.ctl_left);
 
-		struct Frame *frame = frame_begin();
+		/* Camera stuff */
+		freecam_update(&freecam, delta);
+		freecam_to_camera(&freecam, &frame->camera);
+		glm_perspective(
+			glm_rad(freecam.fov),
+			frame->width / (float) frame->height,
+			0.1f, 1000.0f,
+			frame->camera.projection
+		);
+		frame->camera.projection[1][1] *= -1; 
 
 		gfx_teapot_draw(frame);
-		
 		gfx_text_draw(frame, txt.gfx);
-		frame_end(frame);
 
+		frame_end(frame);
 		engine_tick();
 
 		sleep = (1.0f/(float)fps_max) - (glfwGetTime()-now);

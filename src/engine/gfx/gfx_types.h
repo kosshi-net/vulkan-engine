@@ -11,15 +11,6 @@
 
 #define VK_FRAMES 3
 
-struct SceneUBO {
-	mat4 view;
-	mat4 proj;
-};
-
-struct ObjectUBO {
-	mat4 model;
-} __attribute__ ((aligned ((256)))) ;
-
 struct VkFrame {
 	uint32_t         id;
 
@@ -40,8 +31,9 @@ struct VkEngine {
 
 	double                         last_resize;
 
-
-	/* Core resources */
+	/* 
+	 * Core resources
+	 */
 
 	VmaAllocator                   vma;
 
@@ -67,8 +59,9 @@ struct VkEngine {
 	Array(VkLayerProperties)       validation_avbl;
 	Array(const char*)             validation_req;
 
-
-	/* Swapchain resources */
+	/* 
+	 * Swapchain resources
+	 */
 
 	struct VkFrame                 frames[VK_FRAMES];
 
@@ -93,8 +86,9 @@ struct VkEngine {
 	VkFence                       *fence_image;
 	uint32_t                       current_frame;
 
-
-	/* Shared resources */
+	/* 
+	 * Subrenderer resources 
+	 */
 
 	VkCommandPool                  cmd_pool;  /* Primarily used for staging */
 

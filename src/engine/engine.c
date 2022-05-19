@@ -12,8 +12,6 @@
 #include <stb_image.h>
 
 
-
-
 extern struct VkEngine vk;
 
 int engine_init()
@@ -53,6 +51,9 @@ struct Frame *frame_begin()
 	struct Frame *frame = &_frame;
 	frame->delta = delta;
 	frame->vk    = gfx_frame_get();
+
+	frame->width  = vk.swapchain_extent.width;
+	frame->height = vk.swapchain_extent.height;
 
 	return frame;
 }

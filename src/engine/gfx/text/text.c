@@ -359,18 +359,15 @@ Array(struct GlyphQuad) text_line(
 	for (int i = 0; i < LENGTH(cluster_font); i++) cluster_font[i] = -1;
 
 	for (int f = 0; f < ctx->font_count; f++) {
-
 		fc[f].buf = hb_buffer_create();
 		hb_buffer_set_direction (fc[f].buf, HB_DIRECTION_LTR);
 		hb_buffer_set_script    (fc[f].buf, HB_SCRIPT_COMMON);
-		//hb_buffer_set_language  (fc[f].buf, hb_language_from_string("en", -1));
 		hb_buffer_add_codepoints(fc[f].buf, utf32, -1, start, length);
 		hb_shape(ctx->fonts[f].hb_font,  fc[f].buf, NULL, 0);
 
 		fc[f].glyph_info = hb_buffer_get_glyph_infos(
 			fc[f].buf, &fc[f].glyph_count
 		);
-
 		fc[f].glyph_pos  = hb_buffer_get_glyph_positions(
 			fc[f].buf, &fc[f].glyph_count
 		);
@@ -384,17 +381,14 @@ Array(struct GlyphQuad) text_line(
 		for (int g = 0; g < fc[f].glyph_count; g++) {
 			uint32_t c = fc[f].glyph_info[g].cluster;
 
-			if (fc[f].glyph_info[g].codepoint == 0 
-			 && cluster_font[c] == f
-			){
+			if (fc[f].glyph_info[g].codepoint == 0 && cluster_font[c] == f) {
 				clusters_missing++;
 				cluster_font[c] = -1;
 			}
 		}
 
-		if (clusters_missing == 0) {
+		if (clusters_missing == 0)
 			break;
-		}
 	}
 
 	/* Create quads */
@@ -409,11 +403,10 @@ Array(struct GlyphQuad) text_line(
 		int32_t f = cluster_font[cluster];
 
 		/* Use unicode replacement character of the primary font */
-		if (f == -1) 
-			f = 0;
+		if (f == -1) f = 0;
 
-		/* Find glyph generated for cluster (if any) */
-		int32_t g = fc[f].seek;
+		/* Find glyph generated for cluster (if any), store in g */
+		int32_t g = fc[f].seek; 
 		while (fc[f].glyph_info[g].cluster != cluster) {
 			if (g >= fc[f].glyph_count)
 				goto next_cluster;
@@ -421,13 +414,14 @@ Array(struct GlyphQuad) text_line(
 		}
 		fc[f].seek = g;
 
-
 		/* Push glyphs until cluster changes */
 		bool space   = (utf32[cluster] == ' ');
 		bool newline = (utf32[cluster] == '\n');
 
-		for (; fc[f].glyph_info[g].cluster == cluster && g < fc[f].glyph_count; g++) 
-		{
+		for (; 
+			fc[f].glyph_info[g].cluster == cluster && g < fc[f].glyph_count; 
+			g++
+		){
 			hb_codepoint_t glyphid  = fc[f].glyph_info[g].codepoint;
 
 			struct GlyphSlot *slot = text_find_glyph(ctx, f, glyphid);
@@ -563,7 +557,6 @@ void txtblk_edit(struct TextBlock *restrict block, char*utf8)
 			}
 			line_width += quad->advance_x;
 		}
-
 	}
 }
 
@@ -591,6 +584,8 @@ void txtctx_newline(struct TextContext *restrict ctx)
 
 void txtctx_set_root(struct TextContext *restrict ctx, uint32_t x, uint32_t y)
 {
+	ctx->cursor_x = 0;
+	ctx->cursor_y = 0;
 	ctx->root_x = x;
 	ctx->root_y = y;
 }
