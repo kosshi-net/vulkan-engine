@@ -8,6 +8,9 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "engine/engine.h"
+#include "engine/log/log.h"
+
 #define MAX(x, y) (((x) > (y)) ? (x) : (y))
 #define MIN(x, y) (((x) < (y)) ? (x) : (y))
 

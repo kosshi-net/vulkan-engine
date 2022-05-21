@@ -1,4 +1,5 @@
 #include "engine/engine.h"
+#include "log/log.h"
 #include "common.h"
 
 #include "win/win.h"
@@ -11,7 +12,6 @@
 #define STB_IMAGE_IMPLEMENTATION
 #include <stb_image.h>
 
-
 #ifndef NDEBUG
 #include "execinfo.h"
 void print_trace(void)
@@ -23,25 +23,29 @@ void print_trace(void)
 	size = backtrace(buffer, LENGTH(buffer));
 	strings = backtrace_symbols(buffer, size);
 	
-	for (int i = 0; i < size; i++) {
-		fprintf(stderr, "%s\n", strings[i]);
-	}
+	log_critical("Stack trace:");
 
+	for (int i = 0; i < size; i++) {
+		log_critical("%s", strings[i]);
+	}
 }
+
 #else
+
 void print_trace(void)
 {
+	log_critical("Stack trace unavailable");
 	return;
 }
+
 #endif
 
-void engine_crash_raw(const char *msg, const char *file, const char *func, int line)
+void _engine_crash(const char *msg, const char *file, const char *func, int line)
 {
-	fprintf(stderr,"Crashed!\n%s:%s:%i :: %s\n", file, func, line, msg);
+	_log(LOG_CRITICAL, file, func, line, msg);
 	print_trace();
 	exit(1);
 }
-
 
 extern struct VkEngine vk;
 
@@ -59,6 +63,7 @@ void engine_destroy()
 	gfx_destroy();
 	win_destroy();
 	glfwTerminate();
+	log_info("Goodbye!");
 }
 
 void engine_tick()

@@ -535,7 +535,7 @@ void gfx_text_draw(struct Frame *frame, uint32_t id)
 	);
 
 	if (this->ctx->atlas.dirty) {
-		printf("Uploading atlas!\n");
+		log_debug("Uploading atlas!");
 		vk_text_update_texture(this);
 	}
 

@@ -1,4 +1,5 @@
 #include "engine.h"
+#include "log/log.h"
 #include "gfx.h"
 #include "gfx_types.h"
 #include "vk_swapchain.h"
@@ -18,10 +19,10 @@ bool vk_device_ext_check(const char*ext)
 		const char *name = vk.device_ext_avbl[i].extensionName;
 		if (strcmp(ext, name)==0) goto found;
 	}
-	printf("CHECK %s: FAIL\n", ext);
+	log_error("CHECK %s: FAIL", ext);
 	return false;
 found:
-	printf("CHECK %s: OK\n", ext);
+	log_info("CHECK %s: OK", ext);
 	return true;
 }
 
@@ -41,7 +42,7 @@ bool vk_device_ext_satisfied(VkPhysicalDevice dev)
 		array_delete(vk.device_ext_avbl);
 
 	if (vk.device_ext_req == NULL) {
-		printf("ERROR: vk_dev_ext uninitialized\n");
+		engine_crash("vk_dev_ext uninitialized");
 		return false;
 	}
 
@@ -53,9 +54,9 @@ bool vk_device_ext_satisfied(VkPhysicalDevice dev)
 
 	vkEnumerateDeviceExtensionProperties(dev, NULL, &num, data);
 	
-	if(0)
+	if(vk._verbose)
 		for(int i = 0; i < array_length(vk.device_ext_avbl); i++)
-			printf("%s\n", vk.device_ext_avbl[i].extensionName);
+			log_debug("%s", vk.device_ext_avbl[i].extensionName);
 
 	for ( int i = 0; i < array_length(vk.device_ext_req); i++ )
 		if(!vk_device_ext_check(vk.device_ext_req[i]))
@@ -108,7 +109,7 @@ void vk_select_gpu(void)
 	Array(int) valid_gpus;
 	array_create(valid_gpus);
 
-	printf("Devices: %i\n", dev_num);
+	log_info("Devices: %i", dev_num);
 
 	for (int i = 0; i < dev_num; i++){
 
@@ -121,7 +122,7 @@ void vk_select_gpu(void)
 		VkPhysicalDeviceFeatures dev_features;
 		vkGetPhysicalDeviceFeatures(dev[i], &dev_features);
 
-		printf("%s\n", dev_properties.deviceName);
+		log_info("%s", dev_properties.deviceName);
 
 		if(!dev_features.samplerAnisotropy){
 			continue;
@@ -144,7 +145,7 @@ void vk_select_gpu(void)
 		vk_swapchain_details_free(&swap);
 		if(!ok) return;
 
-		printf("Device OK\n");
+		log_info("Device OK");
 		array_push(valid_gpus, i);
 
 		continue;

@@ -3,6 +3,7 @@
 #include "gfx/teapot/teapot.h"
 #include "gfx/camera.h"
 #include "common.h"
+#include "log/log.h"
 #include "array.h"
 #include "event/event.h"
 #include "res.h"
@@ -89,22 +90,22 @@ void vk_load_teapot(void){
 
 	fastObjMesh *mesh = fast_obj_read("teapot.obj");
 
-	printf("Loaded utah teapot\n");
-	printf("Groups:    %i\n", mesh->group_count);
-	printf("Objects:   %i\n", mesh->object_count);
-	printf("Materials: %i\n", mesh->material_count);
-	printf("Faces      %i\n", mesh->face_count);
-	printf("Positions  %i\n", mesh->position_count);
-	printf("Indices    %i\n", mesh->index_count);
-	printf("Normals    %i\n", mesh->normal_count);
-	printf("UVs        %i\n", mesh->texcoord_count);
+	log_info("Loaded utah teapot");
+	log_info("Groups:    %i", mesh->group_count);
+	log_info("Objects:   %i", mesh->object_count);
+	log_info("Materials: %i", mesh->material_count);
+	log_info("Faces      %i", mesh->face_count);
+	log_info("Positions  %i", mesh->position_count);
+	log_info("Indices    %i", mesh->index_count);
+	log_info("Normals    %i", mesh->normal_count);
+	log_info("UVs        %i", mesh->texcoord_count);
 
 	int idx = 0;
 	array_create(pot_vertex);
 	array_create(pot_index);
 
 	for ( int i = 0; i < mesh->group_count; i++ ){
-		printf("Group %i) %s\n", i, mesh->groups[i].name);
+		log_info("Group %i) %s", i, mesh->groups[i].name);
 
 		fastObjGroup *group = &mesh->groups[i];
 		int gidx = 0;
@@ -129,7 +130,7 @@ void vk_load_teapot(void){
 					array_push(pot_index, idx+0);
 					break;
 				default:
-					printf("UNSUPPORTED POLYGON %i\n", face_verts);
+					log_error("UNSUPPORTED POLYGON %i\n", face_verts);
 					break;
 			}
 
@@ -156,8 +157,8 @@ void vk_load_teapot(void){
 		}
 	}
 
-	printf("Pot floats: %li\n", array_length(pot_vertex) );
-	printf("Pot indices: %i\n", idx);
+	log_info("Pot floats: %li", array_length(pot_vertex) );
+	log_info("Pot indices: %i", idx);
 
 	fast_obj_destroy(mesh);
 }

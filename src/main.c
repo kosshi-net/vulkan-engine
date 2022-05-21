@@ -1,5 +1,6 @@
 #include "engine/engine.h"
 #include "engine/win/win.h"
+#include "engine/log/log.h"
 #include "engine/gfx/gfx.h"
 #include "engine/gfx/camera.h"
 #include "engine/gfx/teapot/teapot.h"
@@ -13,6 +14,8 @@ int main(int argc, char**argv)
 {
 	engine_init();
 	input_init();
+	
+	log_info("Hello Vulkan!");
 
 	struct {
 		struct TextContext *ctx;

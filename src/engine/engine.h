@@ -24,11 +24,7 @@ frame_begin();
 
 void frame_end(struct Frame *);
 
-#ifndef NDEBUG
-#define engine_crash(msg) engine_crash_raw(msg, __FILE__, __func__, __LINE__);
-#else
-#define engine_crash(msg) engine_crash_raw(msg, "?.c", __func__, __LINE__);
-#endif
+void _engine_crash(const char*, const char*, const char*, int);
+#define engine_crash(msg) (_engine_crash)(msg, __FILE__, __func__, __LINE__)
 
-void engine_crash_raw(const char*, const char*, const char*, int);
 

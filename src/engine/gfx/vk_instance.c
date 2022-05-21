@@ -1,6 +1,7 @@
 #include "gfx/gfx_types.h"
 #include "engine.h"
 #include "common.h"
+#include "log/log.h"
 #include "array.h"
 
 extern struct VkEngine vk;
@@ -16,10 +17,10 @@ bool vk_instance_ext_check(const char*ext)
 		if (strcmp(ext, name)==0) 
 			goto found;
 	}
-	printf("CHECK %s: FAIL\n", ext);
+	log_error("CHECK %s: FAIL", ext);
 	return false;
 found:
-	printf("CHECK %s: OK\n", ext);
+	log_info("CHECK %s: OK", ext);
 	return true;
 }
 
@@ -39,7 +40,7 @@ void vk_instance_ext_get_avbl(void)
 	if(vk._verbose)
 		for( int i = 0; i < array_length(vk.instance_ext_avbl); i++ ){
 			const char *name = vk.instance_ext_avbl[i].extensionName;
-			printf("%s\n", name );
+			log_debug("%s", name );
 		}
 }
 
@@ -58,10 +59,10 @@ bool vk_validation_check(const char*ext)
 		const char *name = vk.validation_avbl[i].layerName;
 		if (strcmp(ext, name)==0) goto found;
 	}
-	printf("CHECK %s: FAIL\n", ext);
+	log_error("CHECK %s: FAIL\n", ext);
 	return false;
 found:
-	printf("CHECK %s: OK\n", ext);
+	log_info("CHECK %s: OK", ext);
 	return true;
 }
 
@@ -80,7 +81,7 @@ void vk_validation_get_avbl(void)
 	if (vk._verbose)
 		for( int i = 0; i < array_length(vk.validation_avbl); i++ ){
 			const char *name = vk.validation_avbl[i].layerName;
-			printf("%s\n", name );
+			log_debug("%s", name );
 		}
 }
 
@@ -133,3 +134,4 @@ void vk_create_instance(void)
 	
 	if (ret != VK_SUCCESS) engine_crash("vkCreateInstance failed");
 }
+

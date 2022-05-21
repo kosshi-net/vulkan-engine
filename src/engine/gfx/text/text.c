@@ -1,6 +1,8 @@
 #include "gfx/text/text.h"
 
+#include "engine.h"
 #include "common.h"
+#include "log/log.h"
 #include "ppm.h"
 #include <harfbuzz/hb-ft.h>
 #include <GLFW/glfw3.h>
@@ -56,10 +58,10 @@ Array(utf32_t) utf8_to_utf32(char*utf8)
 	iconv_t cd = iconv_open("UCS-4LE", "UTF-8"); 
 
 	if( cd == (iconv_t)-1 ){
-		printf("Error in iconv_open\n");
-		if(errno == EINVAL){
-			printf("Conversion unavailable\n");
-		}
+		if (errno == EINVAL) 
+			engine_crash("Conversion unavailable");
+		else
+			engine_crash("iconv_open failed");
 	}
 	
 	char*ci = utf8;
@@ -72,9 +74,8 @@ Array(utf32_t) utf8_to_utf32(char*utf8)
 		&co, &col
 	);
 	
-	if(ret==(size_t)-1){
-		printf("Error\n");
-	}
+	if(ret==(size_t)-1)
+		engine_crash("iconv failed");
 
 	return utf32;
 }
@@ -91,10 +92,10 @@ Array(char) utf32_to_utf8( Array(utf32_t) utf32 )
 	iconv_t cd = iconv_open("UTF-8", "UCS-4LE"); 
 
 	if( cd == (iconv_t)-1 ){
-		printf("Error in iconv_open\n");
-		if(errno == EINVAL){
-			printf("Conversion unavailable\n");
-		}
+		if (errno == EINVAL) 
+			engine_crash("Conversion unavailable");
+		else
+			engine_crash("iconv_open failed");
 	}
 	
 	char*ci = (void*)utf32;
@@ -107,9 +108,8 @@ Array(char) utf32_to_utf8( Array(utf32_t) utf32 )
 		&co, &col
 	);
 	
-	if(ret==(size_t)-1){
-		printf("Error\n");
-	}
+	if(ret==(size_t)-1)
+		engine_crash("iconv failed");
 
 	return utf8;
 }
@@ -142,9 +142,10 @@ struct TextContext *txtctx_create()
 	array_create(ctx->vertex_buffer);
 	array_create(ctx->block_buffer);
 
-	if(!ft){
+	if(!ft) {
 		ret = FT_Init_FreeType(&ft);
-		if(ret) goto error;
+		if(ret) 
+			engine_crash("FT_Init_FreeType failed");
 	}
 
 	for (int i = 0; i < ctx->font_count; i++) {
@@ -154,7 +155,7 @@ struct TextContext *txtctx_create()
 			0,
 			&f->ft_face
 		);
-		if(ret) goto error;
+		if(ret) engine_crash("FT_New_face failed");
 		FT_Set_Pixel_Sizes(f->ft_face, 0, ctx->font_size);
 		f->hb_font = hb_ft_font_create_referenced(f->ft_face);
 		hb_ft_font_set_funcs(f->hb_font);
@@ -199,9 +200,6 @@ struct TextContext *txtctx_create()
 	);
 
 	return ctx;
-error:
-	printf("Error while init CTX\n");
-	return NULL;
 }
 
 void text_create_bin( 
@@ -289,7 +287,7 @@ struct GlyphSlot *text_cache_glyph(
 		if( h <= atlas->bin[bin_num].h
 		&&  w <= atlas->bin[bin_num].w) goto bin_found;
 	}
-	printf("No bin big enough! %i %i\n",w,h);
+	log_error("No bin big enough! %i %i",w,h);
 	goto error;
 bin_found:
 	/* Use any free slot first, evict refcount=0 from cache as last resort */
@@ -304,7 +302,7 @@ bin_found:
 		}
 	}
 	if (slot_id > -1) goto slot_found;
-	printf("Out of slots! %i %i\n", w, h);
+	log_error("Out of slots! %i %i", w, h);
 	goto error;
 slot_found:
 	slot = &bin->slot[slot_id];
@@ -317,7 +315,6 @@ slot_found:
 	slot->w = w;
 	slot->h = h;
 
-	//printf("Copy glyph bitmap\n");
 	for( int x = 0; x < w; x++ )
 	for( int y = 0; y < h; y++ ){
 		uint8_t pixel = glyph->bitmap.buffer[ w * y + x ];
@@ -331,7 +328,7 @@ slot_found:
 
 	return slot;
 error:
-	printf("Error caching font\n");
+	log_error("Error caching font");
 	return NULL;
 }
 
@@ -566,10 +563,8 @@ void txtblk_align(
 			if (quad->newline || g+1 == array_length(block->quads)) {
 				int32_t offset = block->max_width - line_width - 2;
 
-				if (block->align == TEXT_ALIGN_CENTER) {
+				if (block->align == TEXT_ALIGN_CENTER) 
 					offset = offset * 0.5;
-					printf("Offset %i\n", offset);
-				}
 
 				for (int j = line_start; j < g+1; j++) {
 					block->quads[j].offset_x   += offset;

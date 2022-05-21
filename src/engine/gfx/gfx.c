@@ -260,6 +260,7 @@ void vk_recreate_swapchain()
 	}
 
 	vkDeviceWaitIdle(vk.dev);
+	log_info("Recreating swapchain");
 
 	event_fire(EVENT_VK_SWAPCHAIN_DESTROY, NULL);
 
@@ -521,9 +522,9 @@ void gfx_destroy()
 {
 	vk_destroy_swapchain();
 	vkDestroySampler(vk.dev, vk.texture_sampler, NULL);
-	for(int i = 0; i < VK_FRAMES; i++){
+	for(int i = 0; i < VK_FRAMES; i++)
 		vk_destroy_frame( &vk.frames[i] );
-	}
+
 	vkDestroyDescriptorPool(vk.dev, vk.descriptor_pool, NULL);
 	vkDestroyCommandPool(vk.dev, vk.cmd_pool, NULL);
 	vkDestroySurfaceKHR(vk.instance, vk.surface, NULL);

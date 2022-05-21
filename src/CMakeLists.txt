@@ -9,6 +9,7 @@ add_executable( engine
 	engine/res.c
 	engine/fileutil.c
 	engine/ppm.c
+	engine/log/log.c
 
 	engine/event/event.c
 	engine/win/win.c
@@ -24,24 +25,6 @@ add_executable( engine
 	engine/gfx/teapot/teapot.c
 	engine/gfx/vma.cpp
 )
-
-#target_compile_options( engine PUBLIC
-#	"-O0"
-#	"-g2"
-	#"-mavx2"
-	#"-ffast-math"
-	#"-march=native"
-	#"-ftree-vectorize"
-	#"-O3"
-	#"-Wformat-truncation=0"
-	#	"-Wall"
-	#"-static"
-	#	"-rdynamic"
-	#	"-ggdb"
-
-
-	#	"${OpenMP_CXX_FLAGS}"
-	#)
 
 target_link_libraries( engine
 	"${OpenMP_CXX_FLAGS}"	
