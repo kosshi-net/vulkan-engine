@@ -25,9 +25,9 @@ struct VkFrame {
 };
 
 struct VkEngine {
-	const char                    *error;
-	bool                           _verbose;
 	GLFWwindow                    *window;
+
+	bool _verbose;
 
 	double                         last_resize;
 

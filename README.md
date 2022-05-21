@@ -1,6 +1,7 @@
-# Vulkan Teapots
+# Vulkan engine
 
-Hello Vulkan! A learner project in C. Aim is to implement a reasonable base for a game engine.
+This project aims to implement a small vulkan-based game engine for primarily 
+personal use. 
 
 ## Current features
 ### General
@@ -41,18 +42,17 @@ https://user-images.githubusercontent.com/19539479/154944471-8bf0f198-ee2f-4e73-
 	- Stop recreating the staging buffer
 - Make sure atlas upload is synced properly 
 	- Pipeline barriers?
-- Use less wasteful buffers for text (uint16_t over float?)
 
 ## Building
 ### Linux 
 ```
-./clear.sh
+./prepare.sh
 ./build.sh 
 ./run.sh
 ```
 
 ### Windows
-Not tested but should be trivial with MinGW64
+Not tested but should be trivial with MinGW64.
 
 ## Dependencies
 Clone the following repositories or files into lib/

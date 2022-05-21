@@ -15,8 +15,6 @@ set( VERSION_MINOR 1 )
 		endif()
 	endif()
 
-
-
 ### CONFIGURATION ###
 	
 	# Disable building useless GLFW stuff
@@ -27,38 +25,23 @@ set( VERSION_MINOR 1 )
 	# Export stuff for linters
 	set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
-	# 3rd party library location
-	set( EXTERNAL lib )
-
-	# DEBUG
-	set( DEBUG_GFX_TEXT_WRITE_PPM 0 )
-
 
 	set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 	set(CMAKE_LIBRARY_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 	set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
 
-	find_package(Vulkan REQUIRED FATAL_ERROR)
-
 ### CLI OPTIONS ###
-	option( DEBUG "Compile in debugging mode" )
-	
-	if(DEBUG)
-		set( CMAKE_BUILD_TYPE Debug ) 
-		set( CMAKE_BUILD_TYPE RelWithDebInfo )
-		set (CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG}
-			-fno-omit-frame-pointer 
-			-fsanitize=address 
-			-fsanitize=undefined
-			-fno-sanitize-recover"
-		)
-		set (CMAKE_LINKER_FLAGS_DEBUG "${CMAKE_LINKER_FLAGS_DEBUG} 
-			-fno-omit-frame-pointer 
-			-fsanitize=address")
-	endif(DEBUG)
+	option(DEBUG "Debug mode" TRUE)
+
+	if (DEBUG)
+		set (CMAKE_BUILD_TYPE Debug) 
+		set (CMAKE_ENABLE_EXPORTS TRUE)
+	else()
+		set (CMAKE_BUILD_TYPE Release)
+	endif()
 
 ### LIBRARIES ### 
-
+	set( EXTERNAL lib )
 
 	add_subdirectory	(${EXTERNAL}/fast_obj)
 	include_directories (${EXTERNAL}/fast_obj)
@@ -87,6 +70,9 @@ set( VERSION_MINOR 1 )
 	# HARFBUZZ
 	find_package(harfbuzz REQUIRED)
 
+	# VULKAN
+	find_package(Vulkan REQUIRED)
+
 	# FRIBIDI 
 	include(FindPkgConfig)
 	pkg_search_module (FRIBIDI REQUIRED fribidi)
@@ -94,7 +80,6 @@ set( VERSION_MINOR 1 )
 
 	include_directories	(include)	
 	include_directories	(src)
-
 
 ### BUILD ###
 

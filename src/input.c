@@ -1,3 +1,4 @@
+#include "engine/engine.h"
 #include "input.h"
 #include "win/win.h"
 
@@ -38,6 +39,9 @@ void input_key_callback(
 
 		if (key == GLFW_KEY_Q) 
 			win_close();
+
+		if (key == GLFW_KEY_DELETE) 
+			engine_crash("Test crash");
 		
 	}
 

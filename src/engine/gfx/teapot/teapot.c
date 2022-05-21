@@ -168,12 +168,8 @@ void vk_load_teapot(void){
 
 void vk_create_pipeline()
 {
-	if(vk.error) return;
-
 	VkShaderModule vert_shader = vk_create_shader_module(RES_SHADER_VERT_TEST);
 	VkShaderModule frag_shader = vk_create_shader_module(RES_SHADER_FRAG_TEST);
-
-	if(vk.error) return;
 
 	VkPipelineShaderStageCreateInfo shader_stages[] = {
 		{
@@ -312,10 +308,7 @@ void vk_create_pipeline()
 		&pipeline_layout_info, NULL, &this->pipeline_layout
 	);
 
-	if(ret != VK_SUCCESS) {
-		vk.error = "Failed to create pipeline layout";
-		return;
-	}
+	if(ret != VK_SUCCESS) engine_crash("vkCreatePipelineLayout failed");
 
 	VkGraphicsPipelineCreateInfo pipeline_info = {
 		.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -340,10 +333,7 @@ void vk_create_pipeline()
 		VK_NULL_HANDLE, 1, &pipeline_info, NULL, &this->pipeline
 	);
 
-	if(ret != VK_SUCCESS) {
-		vk.error = "Failed to create graphics pipeline";
-		return;
-	}
+	if(ret != VK_SUCCESS) engine_crash("vkCreateGraphicsPipelines failed");
 
     vkDestroyShaderModule(vk.dev, frag_shader, NULL);	
     vkDestroyShaderModule(vk.dev, vert_shader, NULL);	
@@ -352,7 +342,6 @@ void vk_create_pipeline()
 
 void vk_create_scene_layout()
 {
-	if(vk.error) return;
 	VkResult ret;
 
 	VkDescriptorSetLayoutBinding ubo_binding = {
@@ -383,16 +372,12 @@ void vk_create_scene_layout()
 		&layout_info, NULL, &this->scene_layout
 	);
 
-	if(ret != VK_SUCCESS){
-		vk.error = "Failed to create descriptor set layout";
-		return;
-	}
+	if (ret != VK_SUCCESS) engine_crash("vkCreateDescriptorSetLayout failed");
 }
 
 
 void vk_create_object_layout()
 {
-	if(vk.error) return;
 	VkResult ret;
 
 	VkDescriptorSetLayoutBinding ubo_binding = {
@@ -415,10 +400,7 @@ void vk_create_object_layout()
 		&layout_info, NULL, &this->object_layout
 	);
 
-	if(ret != VK_SUCCESS){
-		vk.error = "Failed to create object descriptor layout";
-		return;
-	}
+	if (ret != VK_SUCCESS) engine_crash("vkCreateDescriptorSetLayout");
 }
 
 /*************
@@ -427,7 +409,6 @@ void vk_create_object_layout()
 
 void teapot_frame_create( struct TeapotFrameData *restrict frame )
 {
-	if(vk.error) return;
 	VkResult ret;
 
 	frame->object_num = 0;
@@ -466,7 +447,7 @@ void teapot_frame_create( struct TeapotFrameData *restrict frame )
 		.pSetLayouts        = &this->scene_layout
 	};
 	ret = vkAllocateDescriptorSets(vk.dev, &desc_ainfo, &frame->scene_descriptor);
-	if(ret != VK_SUCCESS) goto failure;
+	if(ret != VK_SUCCESS) engine_crash("vkAllocateDescriptorSets failed");
 
 	VkWriteDescriptorSet desc_write[] = {
 		{
@@ -505,7 +486,7 @@ void teapot_frame_create( struct TeapotFrameData *restrict frame )
 		.pSetLayouts        = &this->object_layout
 	};
 	ret = vkAllocateDescriptorSets(vk.dev, &dyndesc_ainfo, &frame->object_descriptor);
-	if(ret != VK_SUCCESS) goto failure;
+	if(ret != VK_SUCCESS) engine_crash("vkAllocateDescriptorSets failed");
 
 failure:
 	return;
@@ -526,7 +507,6 @@ void teapot_frame_destroy(struct TeapotFrameData *restrict frame)
 
 void vk_update_object_buffer(struct TeapotFrameData *frame)
 {
-	if(vk.error) return;
 	double now   = glfwGetTime();
 
 	/* Clear previous frame */
@@ -610,8 +590,6 @@ void vk_update_object_buffer(struct TeapotFrameData *frame)
 
 void vk_update_uniform_buffer(struct TeapotFrameData *frame, struct Camera *camera)
 {
-	if(vk.error) return;
-
 	glm_mat4_copy(camera->view,       scene_ubo.view);
 	glm_mat4_copy(camera->projection, scene_ubo.proj);
 
@@ -626,10 +604,8 @@ void gfx_teapot_draw(struct Frame *restrict engine_frame)
 	struct TeapotFrameData *frame = &this->frame[engine_frame->vk->id];
 
 	vk_update_object_buffer(frame);
-	if (vk.error) return;
 
 	vk_update_uniform_buffer(frame, &engine_frame->camera);
-	if (vk.error) return;
 
 	VkCommandBuffer cmd = engine_frame->vk->cmd_buf;
 
@@ -665,14 +641,10 @@ void gfx_teapot_draw(struct Frame *restrict engine_frame)
 
 void vk_create_texture(void)
 {
-	if (vk.error) return;
 	int texw, texh, texch;
 	stbi_uc *pixels = stbi_load("texture.png", &texw, &texh, &texch, STBI_rgb_alpha);
 	
-	if (!pixels){
-		vk.error = "Failed to load texture (file missing?)";
-		return;
-	}
+	if (!pixels) engine_crash("stbi_load failed (missing file?)");
 
 	VkDeviceSize   image_size = texw * texh * 4;
 	
@@ -722,8 +694,6 @@ void vk_create_texture(void)
 
 void vk_create_texture_view()
 {
-	if (vk.error) return;
-	
 	VkImageViewCreateInfo create_info = {
 		.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 		.image    = this->texture_image,
@@ -744,10 +714,7 @@ void vk_create_texture_view()
 
 	VkResult ret = vkCreateImageView(vk.dev, &create_info, NULL, &this->texture_view);
 
-	if (ret != VK_SUCCESS) {
-		vk.error = "Failed to create image view for texture";
-		return;
-	};
+	if (ret != VK_SUCCESS) engine_crash("vkCreateImageView failed");
 }
 
 void gfx_teapot_swapchain_deps_create(void*arg)
@@ -757,7 +724,6 @@ void gfx_teapot_swapchain_deps_create(void*arg)
 
 void gfx_teapot_swapchain_deps_destroy(void*arg)
 {
-	printf("Free teapot swapchain deps\n");
 	vkDestroyPipeline(vk.dev, this->pipeline, NULL);
 	vkDestroyPipelineLayout(vk.dev, this->pipeline_layout, NULL);
 }
@@ -789,7 +755,6 @@ uint32_t gfx_teapot_renderer_create(void)
 
 	gfx_teapot_swapchain_deps_create(NULL);
 
-
 	for (int i = 0; i < VK_FRAMES; i++) {
 		teapot_frame_create(&this->frame[i]);
 	}
@@ -802,12 +767,10 @@ uint32_t gfx_teapot_renderer_create(void)
 
 void gfx_teapot_renderer_destroy(uint32_t handle)
 {
-
 	event_unbind(EVENT_VK_SWAPCHAIN_DESTROY, &gfx_teapot_swapchain_deps_destroy);
 	event_unbind(EVENT_VK_SWAPCHAIN_CREATE,  &gfx_teapot_swapchain_deps_create);
 
 	gfx_teapot_swapchain_deps_destroy(NULL);
-
 
 	for (int i = 0; i < VK_FRAMES; i++) {
 		teapot_frame_destroy(&this->frame[i]);

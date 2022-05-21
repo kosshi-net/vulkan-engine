@@ -1,4 +1,5 @@
 #include "common.h"
+#include "engine.h"
 #include "array.h"
 #include "fileutil.h"
 #include "res.h"
@@ -34,8 +35,6 @@ void vk_create_depth_resources(void);
 
 void vk_create_renderpass()
 {
-	if(vk.error) return;
-
 	VkAttachmentDescription color_attachment = {
 		.format  = vk.swapchain_img_format,
 		.samples = VK_SAMPLE_COUNT_1_BIT,
@@ -98,10 +97,8 @@ void vk_create_renderpass()
 	};
 	
 	VkResult ret = vkCreateRenderPass(vk.dev, &render_pass_info, NULL, &vk.renderpass);
-	if(ret != VK_SUCCESS){
-		vk.error = "Failed to create render pass";
-		return;
-	}
+
+	if(ret != VK_SUCCESS) engine_crash("vkCreateRenderPass failed");
 }
 
 /***************
@@ -110,8 +107,6 @@ void vk_create_renderpass()
 
 void vk_create_framebuffers()
 {
-	if(vk.error) return;
-
 	vk.framebuffers_num = vk.swapchain_img_num;
 	vk.framebuffers     = malloc(sizeof(VkFramebuffer) * vk.framebuffers_num);
 
@@ -132,10 +127,7 @@ void vk_create_framebuffers()
 		};
 		
 		VkResult ret = vkCreateFramebuffer(vk.dev, &fb_info, NULL, &vk.framebuffers[i]);
-		if(ret != VK_SUCCESS) {
-			vk.error = "Failed to create framebuffers";
-			return;
-		}
+		if(ret != VK_SUCCESS) engine_crash("vkCreateFramebuffer failed");
 	}
 }
 
@@ -145,7 +137,6 @@ void vk_create_framebuffers()
 
 void vk_create_cmd_pool()
 {
-	if(vk.error) return;
 	VkResult ret; 
 
 	VkCommandPoolCreateInfo pool_info = {
@@ -155,16 +146,12 @@ void vk_create_cmd_pool()
 		       | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT // Is this a good idea?
 	};
 	ret = vkCreateCommandPool(vk.dev, &pool_info, NULL, &vk.cmd_pool);
-	if(ret != VK_SUCCESS) {
-		vk.error = "Failed to create vk.cmd_pool";
-		return;
-	}
+	if(ret != VK_SUCCESS) engine_crash("vkCreateCommandPool failed");
 }
 
 
 void vk_init_frame( struct VkFrame *frame )
 {
-	if(vk.error) return;
 	VkResult ret; 
 
 	/*
@@ -178,7 +165,7 @@ void vk_init_frame( struct VkFrame *frame )
 		       | VK_COMMAND_POOL_CREATE_TRANSIENT_BIT // Is this a good idea?
 	};
 	ret = vkCreateCommandPool(vk.dev, &pool_info, NULL, &frame->cmd_pool);
-	if(ret != VK_SUCCESS) goto failure;
+	if(ret != VK_SUCCESS) engine_crash("vkCreateCommandPool failed");
 	
 	VkCommandBufferAllocateInfo alloc_info = {
 		.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO,
@@ -187,7 +174,7 @@ void vk_init_frame( struct VkFrame *frame )
 		.commandBufferCount = 1,
 	};
 	ret = vkAllocateCommandBuffers(vk.dev, &alloc_info, &frame->cmd_buf);
-	if(ret != VK_SUCCESS) goto failure;
+	if(ret != VK_SUCCESS) engine_crash("vkAllocateCommandBuffers failed");
 	
 	/*
 	 * Sync
@@ -197,36 +184,32 @@ void vk_init_frame( struct VkFrame *frame )
 		.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO,
 	};
 	ret = vkCreateSemaphore(vk.dev, &sema_info, NULL, &frame->image_available);
-	if(ret != VK_SUCCESS) goto failure;
+	if(ret != VK_SUCCESS) engine_crash("vkCreateSemaphore failed");
+
 	ret = vkCreateSemaphore(vk.dev, &sema_info, NULL, &frame->render_finished);
-	if(ret != VK_SUCCESS) goto failure;
+	if(ret != VK_SUCCESS) engine_crash("vkCreateSemaphore failed");
+
 	VkFenceCreateInfo fence_info = {
 		.sType = VK_STRUCTURE_TYPE_FENCE_CREATE_INFO,
 		.flags = VK_FENCE_CREATE_SIGNALED_BIT,
 	};
-	ret = vkCreateFence(vk.dev, &fence_info, NULL, &frame->flight);
-	if(ret != VK_SUCCESS) goto failure;
 
-	return;
-failure:
-	vk.error = "Failed to initialize frames";
+	ret = vkCreateFence(vk.dev, &fence_info, NULL, &frame->flight);
+	if(ret != VK_SUCCESS) engine_crash("vkCreateFence failed");
+
 }
 
 
 void vk_destroy_frame( struct VkFrame *frame )
 {
-	printf("Free frame\n");
-
-	vkDestroySemaphore(vk.dev, frame->image_available, NULL);
-	vkDestroySemaphore(vk.dev, frame->render_finished, NULL);
-	vkDestroyFence    (vk.dev, frame->flight,          NULL);
-
+	vkDestroySemaphore  (vk.dev, frame->image_available, NULL);
+	vkDestroySemaphore  (vk.dev, frame->render_finished, NULL);
+	vkDestroyFence      (vk.dev, frame->flight,          NULL);
 	vkDestroyCommandPool(vk.dev, frame->cmd_pool, NULL);
 }
 
 void vk_create_sync()
 {
-	if( vk.error ) return;
 	vk.fence_image = calloc( sizeof(vk.swapchain_img_num), sizeof(VkFence) );
 	return;
 }
@@ -234,7 +217,6 @@ void vk_create_sync()
 
 void vk_create_descriptor_pool()
 {
-	if (vk.error) return;
 	VkDescriptorPoolSize pool_sizes[] = {
 		{
 			.type  = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -261,17 +243,12 @@ void vk_create_descriptor_pool()
 
 	VkResult ret;
 	ret = vkCreateDescriptorPool(vk.dev, &pool_info, NULL, &vk.descriptor_pool);
-	if (ret != VK_SUCCESS) {
-		vk.error = "Failed to create descriptor pool";
-		return;
-	}
+	if (ret != VK_SUCCESS) engine_crash("vkCreateDescriptorPool failed");
 }
 
 
 void vk_recreate_swapchain()
 {
-	if(vk.error) return;
-	
 	double now = glfwGetTime();
 	if(vk.last_resize + 0.25 > now ) return;
 
@@ -304,7 +281,6 @@ void vk_recreate_swapchain()
 
 struct VkFrame *gfx_frame_get()
 {
-	if (vk.error) return NULL;
 	VkResult ret;
 
 	struct VkFrame *restrict frame = &vk.frames[vk.current_frame];
@@ -319,8 +295,7 @@ struct VkFrame *gfx_frame_get()
 	if (ret == VK_ERROR_OUT_OF_DATE_KHR ) {
 		vk_recreate_swapchain();
 	} else if (ret != VK_SUCCESS && ret != VK_SUBOPTIMAL_KHR) {
-		vk.error = "Unhandled image acquire error";
-		return NULL;
+		engine_crash("Unhandled image capture error");
 	}
 
 	if (vk.fence_image[frame->image_index] != VK_NULL_HANDLE) {
@@ -339,10 +314,7 @@ struct VkFrame *gfx_frame_get()
 		.pInheritanceInfo = NULL,
 	};
 	ret = vkBeginCommandBuffer(cmd, &begin_info);
-	if(ret != VK_SUCCESS){
-		vk.error = "Failed to begin recording command buffer";
-		return NULL;
-	}
+	if(ret != VK_SUCCESS) engine_crash("vkBeginCommandBuffer failed");
 
 	VkClearValue clear_color[] = {
 		{{{0.0f, 0.0f, 0.0f, 1.0f}}},
@@ -366,17 +338,12 @@ struct VkFrame *gfx_frame_get()
 
 void gfx_frame_submit(struct VkFrame *frame)
 {
-	if (vk.error) return;
 	VkResult ret;
 
 	vkCmdEndRenderPass(frame->cmd_buf);
 	ret = vkEndCommandBuffer(frame->cmd_buf);
-
-	if(ret != VK_SUCCESS){
-		vk.error = "Failed to record command buffer";
-		return;
-	}
-
+	
+	if(ret != VK_SUCCESS) engine_crash("vkEndCommandBuffer failed");
 
 	VkSemaphore          wait_semas[]  = {frame->image_available};
 	VkPipelineStageFlags wait_stages[] = {VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT};
@@ -396,10 +363,7 @@ void gfx_frame_submit(struct VkFrame *frame)
 	
 	vkResetFences  (vk.dev, 1, &frame->flight);
 	ret = vkQueueSubmit(vk.graphics_queue, 1, &submit_info, frame->flight);
-	if (ret != VK_SUCCESS) {
-		vk.error = "Submit failure";
-		return;
-	}
+	if (ret != VK_SUCCESS) engine_crash("vkQueueSubmit failed");
 
 	VkSwapchainKHR swap_chains[] = {vk.swapchain};
 	VkPresentInfoKHR present_info = {
@@ -418,8 +382,7 @@ void gfx_frame_submit(struct VkFrame *frame)
 	|| vk.framebuffer_resize){
 		vk_recreate_swapchain();
 	} else if (ret != VK_SUCCESS) {
-		vk.error = "Presentation failure";
-		return;
+		engine_crash("vkQueuePresentKHR failed");
 	}
 
 	vk.current_frame = (vk.current_frame+1) % VK_FRAMES;
@@ -427,8 +390,6 @@ void gfx_frame_submit(struct VkFrame *frame)
 
 void vk_create_texture_sampler()
 {
-	if (vk.error) return;
-
 	VkSamplerCreateInfo sampler_info = {
 		.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
 		.magFilter               = VK_FILTER_LINEAR,
@@ -449,18 +410,13 @@ void vk_create_texture_sampler()
 	};
 
 	VkResult ret = vkCreateSampler(vk.dev, &sampler_info, NULL, &vk.texture_sampler);
-	if(ret != VK_SUCCESS){
-		vk.error = "Failed to create sampler";
-		return;
-	}
+
+	if(ret != VK_SUCCESS) engine_crash("vkCreateSampler failed");
 }
 
 void vk_create_depth_resources()
 {
-	if (vk.error) return;
-
 	VkFormat depth_format = vk_find_depth_format();
-	if (vk.error) return;
 
 	vk_create_image_vma(
 		vk.swapchain_extent.width,
@@ -492,10 +448,7 @@ void vk_create_depth_resources()
 	};
 
 	VkResult ret = vkCreateImageView(vk.dev, &create_info, NULL, &vk.depth_view);
-	if (ret != VK_SUCCESS) {
-		vk.error = "Failed to create depth image view";
-		return;
-	};
+	if (ret != VK_SUCCESS) engine_crash("vkCreateImageView failed");
 }
 
 /*******
@@ -504,8 +457,6 @@ void vk_create_depth_resources()
 
 void vk_create_allocator()
 {
-	if(vk.error) return;
-
 	VmaAllocatorCreateInfo vma_info = {
 		.vulkanApiVersion = VK_API_VERSION_1_2,
 		.physicalDevice   = vk.dev_physical,
@@ -513,10 +464,7 @@ void vk_create_allocator()
 		.instance         = vk.instance,
 	};
 	VkResult ret = vmaCreateAllocator(&vma_info, &vk.vma);
-	if(ret != VK_SUCCESS) {
-		vk.error = "Failed to create VMA";
-		return;
-	};
+	if(ret != VK_SUCCESS) engine_crash("vmaCreateAllocator failed");
 }
 
 /********
@@ -528,17 +476,13 @@ static void vk_resize_callback(void*arg)
 	vk.framebuffer_resize = true;
 }
 
-int gfx_init(void)
+void gfx_init(void)
 {
 	memset( &vk, 0, sizeof(struct VkEngine) );
 	vk._verbose = true;
 
-	if (glfwVulkanSupported()) {
-		printf("Vulkan supported\n");
-	} else {
-		printf("Vulkan not supported\n");
-		return 1;
-	}
+	if (!glfwVulkanSupported()) 
+		engine_crash("Vulkan is not supported");
 
 	vk.window = win_get();
 	event_bind(EVENT_WIN_RESIZE, vk_resize_callback);
@@ -547,11 +491,6 @@ int gfx_init(void)
 	vk_validation_get_avbl();
 	vk_validation_add("VK_LAYER_KHRONOS_validation");
 	vk_create_instance(); 
-
-	if(vk.error){
-		printf("%s\n", vk.error);
-		return -1;
-	}
 
 	glfwCreateWindowSurface(vk.instance, vk.window, NULL, &vk.surface);
 
@@ -576,37 +515,20 @@ int gfx_init(void)
 		vk_init_frame( &vk.frames[i] );
 		vk.frames[i].id = i;
 	}
-
-	if(vk.error){
-		printf("Vulkan error: %s\n", vk.error);
-		printf("cerrnostr: %s\n", strerror(errno));
-		return 1; // Unclean exit!!
-	}
-
-	return 0;
 }
 
 void gfx_destroy()
 {
 	vk_destroy_swapchain();
-
 	vkDestroySampler(vk.dev, vk.texture_sampler, NULL);
-	
 	for(int i = 0; i < VK_FRAMES; i++){
 		vk_destroy_frame( &vk.frames[i] );
 	}
-
 	vkDestroyDescriptorPool(vk.dev, vk.descriptor_pool, NULL);
 	vkDestroyCommandPool(vk.dev, vk.cmd_pool, NULL);
-
-	printf("Free khr\n");
 	vkDestroySurfaceKHR(vk.instance, vk.surface, NULL);
-
-	printf("Free vma\n");
 	vmaDestroyAllocator(vk.vma);
-	printf("Free dev\n");
 	vkDestroyDevice(vk.dev, NULL);
-	printf("Free ins\n");
 	vkDestroyInstance(vk.instance, NULL);
 }
 

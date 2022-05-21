@@ -25,20 +25,23 @@ add_executable( engine
 	engine/gfx/vma.cpp
 )
 
-target_compile_options( engine PUBLIC
-	"-O1"
+#target_compile_options( engine PUBLIC
+#	"-O0"
+#	"-g2"
 	#"-mavx2"
 	#"-ffast-math"
 	#"-march=native"
 	#"-ftree-vectorize"
 	#"-O3"
-	"-Wformat-truncation=0"
-	"-Wall"
-	"-static"
-	"-ggdb"
+	#"-Wformat-truncation=0"
+	#	"-Wall"
+	#"-static"
+	#	"-rdynamic"
+	#	"-ggdb"
 
-	"${OpenMP_CXX_FLAGS}"
-)
+
+	#	"${OpenMP_CXX_FLAGS}"
+	#)
 
 target_link_libraries( engine
 	"${OpenMP_CXX_FLAGS}"	

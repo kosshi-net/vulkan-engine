@@ -1,5 +1,5 @@
 #include "gfx/gfx_types.h"
-
+#include "engine.h"
 #include "common.h"
 #include "array.h"
 
@@ -95,24 +95,20 @@ void vk_validation_add(const char *ext)
 
 void vk_create_instance(void)
 {
-	if(vk.error) return;
-	
-	// add GLFW extensions
+	/* Add GLFW extensions */
 	uint32_t glfw_ext_num = 0;
 	const char** glfw_ext = glfwGetRequiredInstanceExtensions(&glfw_ext_num);
 	for(int i = 0; i < glfw_ext_num; i++)
 		vk_instance_ext_add(glfw_ext[i]);
 
 	for (int i = 0; i < array_length(vk.instance_ext_req); i++)
-		if (!vk_instance_ext_check(vk.instance_ext_req[i])) {
-			vk.error = "Instance extension requirements not met";
-			return;
-		}
+		if (!vk_instance_ext_check(vk.instance_ext_req[i])) 
+			engine_crash("Instance extension requirements not met");
+		
 	for (int i = 0; i < array_length(vk.validation_req); i++)
-		if (!vk_validation_check(vk.validation_req[i])) {
-			vk.error = "Validation requirements not met";
-			return;
-		}
+		if (!vk_validation_check(vk.validation_req[i])) 
+			engine_crash("Validation layer requirements requirements not met");
+		
 
 	VkApplicationInfo app_info = {
 		.sType = VK_STRUCTURE_TYPE_APPLICATION_INFO,
@@ -135,9 +131,5 @@ void vk_create_instance(void)
 
 	VkResult ret = vkCreateInstance(&create_info, NULL, &vk.instance);
 	
-	if (ret != VK_SUCCESS) {
-		vk.error = "Failed to create vk_instance";
-		return;
-	}
-
+	if (ret != VK_SUCCESS) engine_crash("vkCreateInstance failed");
 }

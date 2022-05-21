@@ -40,12 +40,8 @@ static VkVertexInputAttributeDescription text_attributes[] = {
 
 void vk_text_create_pipeline(struct VkTextContext *restrict this)
 {
-	if(vk.error) return;
-
 	VkShaderModule vert_shader = vk_create_shader_module(RES_SHADER_VERT_TEXT);
 	VkShaderModule frag_shader = vk_create_shader_module(RES_SHADER_FRAG_TEXT);
-
-	if(vk.error) return;
 
 	VkPipelineShaderStageCreateInfo shader_stages[] = {
 		{
@@ -177,10 +173,7 @@ void vk_text_create_pipeline(struct VkTextContext *restrict this)
 	VkResult ret = vkCreatePipelineLayout(vk.dev, 
 			&pipeline_layout_info, NULL, &this->pipeline_layout
 	);
-	if(ret != VK_SUCCESS) {
-		vk.error = "Failed to create pipeline layout";
-		return;
-	}
+	if (ret != VK_SUCCESS) engine_crash("vkCreatePipelineLayout failed");
 
 	VkGraphicsPipelineCreateInfo pipeline_info = {
 		.sType = VK_STRUCTURE_TYPE_GRAPHICS_PIPELINE_CREATE_INFO,
@@ -205,20 +198,14 @@ void vk_text_create_pipeline(struct VkTextContext *restrict this)
 		VK_NULL_HANDLE, 1, &pipeline_info, NULL, &this->pipeline
 	);
 
-	if(ret != VK_SUCCESS) {
-		vk.error = "Failed to create graphics pipeline";
-		return;
-	}
+	if (ret != VK_SUCCESS) engine_crash("vkCreateGraphicsPipelines failed");
 
     vkDestroyShaderModule(vk.dev, frag_shader, NULL);	
     vkDestroyShaderModule(vk.dev, vert_shader, NULL);	
-	return;
 }
 
 void vk_text_create_descriptor_layout(struct VkTextContext *restrict this)
 {
-	if(vk.error) return;
-
 	VkDescriptorSetLayoutBinding ubo_binding = {
 		.binding = 0, 
 		.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
@@ -249,10 +236,8 @@ void vk_text_create_descriptor_layout(struct VkTextContext *restrict this)
 	ret = vkCreateDescriptorSetLayout(vk.dev, 
 		&layout_info, NULL, &this->descriptor_layout
 	);
-	if(ret != VK_SUCCESS){
-		vk.error = "Failed to create object descriptor layout";
-		return;
-	}
+
+	if (ret != VK_SUCCESS) engine_crash("vkCreateDescriptorSetLayout");
 }
 
 void vk_text_update_texture(struct VkTextContext *restrict this)
@@ -296,8 +281,6 @@ void vk_text_update_texture(struct VkTextContext *restrict this)
 
 void vk_text_texture(struct VkTextContext *restrict this)
 {
-	if(vk.error) return;
-
 	int32_t  texw   = this->ctx->atlas.w;
 	int32_t  texh   = this->ctx->atlas.h;
 
@@ -337,10 +320,7 @@ void vk_text_texture(struct VkTextContext *restrict this)
 		&create_info, NULL, &this->texture_view
 	);
 
-	if(ret != VK_SUCCESS) {
-		vk.error = "Failed to create image view for texture";
-		return;
-	};
+	if(ret != VK_SUCCESS) engine_crash("vkCreateImageView failed");
 }
 
 
@@ -350,6 +330,7 @@ void vk_text_create_fbdeps(struct VkTextContext *restrict this)
 	vk_text_create_descriptor_layout(this);
 	vk_text_create_pipeline(this);
 }
+
 void vk_text_destroy_fbdeps(struct VkTextContext *restrict this)
 {
 	vkDestroyPipeline(      vk.dev, this->pipeline, NULL);
@@ -400,7 +381,6 @@ void text_swapchain_create_callback(void*arg)
 
 uint32_t gfx_text_renderer_create(struct TextContext *txtctx)
 {
-	if (vk.error) return -1; 
 	VkResult ret; 
 
 	if (!callbacks_bound) {
@@ -467,7 +447,7 @@ uint32_t gfx_text_renderer_create(struct TextContext *txtctx)
 		ret = vkAllocateDescriptorSets(vk.dev, 
 			&desc_ainfo, &this->frame[i].descriptor_set
 		);
-		if(ret != VK_SUCCESS) goto error;
+		if(ret != VK_SUCCESS) engine_crash("vkAllocateDescriptorSets failed");
 
 		VkDescriptorBufferInfo uniform_buffer_info = {
 			.buffer = this->frame[i].uniform_buffer,
@@ -512,7 +492,8 @@ uint32_t gfx_text_renderer_create(struct TextContext *txtctx)
 			NULL
 		);
 
-		if (ret != VK_SUCCESS) goto error;
+		if(ret != VK_SUCCESS) engine_crash("vmaCreateBuffer failed");
+
 		vmaMapMemory(vk.vma, 
 			this->frame[i].vertex_alloc, 
 			&this->frame[i].vertex_mapping
@@ -520,17 +501,11 @@ uint32_t gfx_text_renderer_create(struct TextContext *txtctx)
 	}
 
 	return id;
-error:
-	vk.error = "Text failed";
-	return -1;
 }
 
 
 void gfx_text_draw(struct Frame *frame, uint32_t id)
 {
-	if(vk.error) return;
-
-	
 	struct VkTextContext *restrict this = &vktxtctx[id];
 	uint32_t f = frame->vk->id;
 

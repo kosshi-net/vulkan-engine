@@ -13,7 +13,6 @@ extern struct VkEngine vk;
 
 struct VkSwapchainDetails *vk_swapchain_details(VkPhysicalDevice dev)
 {
-	if (vk.error) return NULL;
 	struct VkSwapchainDetails *swap = calloc(sizeof(struct VkSwapchainDetails), 1);
 
 	vkGetPhysicalDeviceSurfaceCapabilitiesKHR(dev, vk.surface, 
@@ -104,9 +103,8 @@ VkExtent2D vk_choose_extent( struct VkSwapchainDetails *swap )
 	}
 }
 
-void vk_create_swapchain(void){
-	if (vk.error) return;
-
+void vk_create_swapchain(void)
+{
 	struct VkSwapchainDetails *swap = vk_swapchain_details(vk.dev_physical);
 	
 	VkSurfaceFormatKHR surface_format = *vk_choose_swap_format(swap);
@@ -151,9 +149,7 @@ void vk_create_swapchain(void){
 			NULL, 
 			&vk.swapchain
 	);
-	if (ret != VK_SUCCESS){
-		vk.error = "Failed to create swapchain";
-	};
+	if (ret != VK_SUCCESS) engine_crash("vkCreateSwapchainKHR failed");
 
 	vkGetSwapchainImagesKHR(vk.dev, vk.swapchain, &image_num, NULL);
 	vk.swapchain_img = malloc(sizeof(VkImage) * image_num);
@@ -168,7 +164,6 @@ void vk_create_swapchain(void){
 
 void vk_create_image_views(void)
 {
-	if(vk.error) return;
 	vk.swapchain_img_view = malloc(sizeof(VkImageView) * vk.swapchain_img_num);
 	
 	for (int i = 0; i < vk.swapchain_img_num; i++) {
@@ -190,33 +185,23 @@ void vk_create_image_views(void)
 			.subresourceRange.layerCount = 1,
 		};
 		VkResult ret = vkCreateImageView(vk.dev, &create_info, NULL, &vk.swapchain_img_view[i]);
-		if (ret != VK_SUCCESS) {
-			vk.error = "Failed to create image view";
-			return;
-		};
+		if (ret != VK_SUCCESS) engine_crash("vkCreateImageView failed");
 	}
 	return;
 }
 
 void vk_destroy_swapchain()
 {
-	printf("Free render pass\n");
     vkDestroyRenderPass(vk.dev, vk.renderpass, NULL);
 
-	printf("Free imgviews\n");
 	for (int i = 0; i < vk.swapchain_img_num; i++)
 		vkDestroyImageView(vk.dev, vk.swapchain_img_view[i], NULL);
-	printf("Free swap\n");
+
 	vkDestroySwapchainKHR(vk.dev, vk.swapchain, NULL);
-
-	printf("Free depth\n");
 	vkDestroyImageView(vk.dev, vk.depth_view, NULL);
-
 	vmaDestroyImage(vk.vma, vk.depth_image, vk.depth_alloc);
 
-	printf("Free fbs\n");
 	for (int i = 0; i < vk.framebuffers_num; i++)
 		vkDestroyFramebuffer(vk.dev, vk.framebuffers[i], NULL);
-
 }
 

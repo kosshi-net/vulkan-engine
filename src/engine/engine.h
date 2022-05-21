@@ -3,7 +3,7 @@
 #include "gfx/gfx_types.h"
 #include "gfx/camera.h"
 
-int engine_init(void);
+void engine_init(void);
 void engine_destroy(void);
 void engine_tick(void);
 
@@ -22,7 +22,13 @@ struct Frame {
 struct Frame *
 frame_begin();
 
-void 
-frame_end(struct Frame *);
+void frame_end(struct Frame *);
 
+#ifndef NDEBUG
+#define engine_crash(msg) engine_crash_raw(msg, __FILE__, __func__, __LINE__);
+#else
+#define engine_crash(msg) engine_crash_raw(msg, "?.c", __func__, __LINE__);
+#endif
+
+void engine_crash_raw(const char*, const char*, const char*, int);
 

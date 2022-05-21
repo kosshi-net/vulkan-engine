@@ -1,3 +1,4 @@
+#include "engine.h"
 #include "gfx.h"
 #include "gfx_types.h"
 #include "vk_swapchain.h"
@@ -52,7 +53,7 @@ bool vk_device_ext_satisfied(VkPhysicalDevice dev)
 
 	vkEnumerateDeviceExtensionProperties(dev, NULL, &num, data);
 	
-	if(vk._verbose)
+	if(0)
 		for(int i = 0; i < array_length(vk.device_ext_avbl); i++)
 			printf("%s\n", vk.device_ext_avbl[i].extensionName);
 
@@ -97,14 +98,9 @@ void vk_find_family_indices(VkPhysicalDevice device)
 
 void vk_select_gpu(void)
 {
-	if (vk.error) return;
-
 	uint32_t dev_num = 0;
 	vkEnumeratePhysicalDevices(vk.instance, &dev_num, NULL);
-	if (dev_num == 0) {
-		vk.error = "No devices";
-		return;
-	};
+	if (dev_num == 0) engine_crash("No devices available");
 
 	VkPhysicalDevice dev[dev_num];
 	vkEnumeratePhysicalDevices(vk.instance, &dev_num, dev);
@@ -155,19 +151,18 @@ void vk_select_gpu(void)
 	}
 
 	if(array_length(valid_gpus) == 0)
-		vk.error = "No suitable device";
+		engine_crash("No suitable device");
 	if(array_length(valid_gpus) > 1)
-		vk.error = "Too many suitable devices and no default selected";
+		engine_crash("Can't decide between multiple suitable devices (TODO)");
 	if(array_length(valid_gpus) == 1)
 		vk.dev_physical = dev[ valid_gpus[0] ];
-	array_delete(valid_gpus);
+	array_destroy(valid_gpus);
 }
 
 
 VkDevice vk_create_device()
 {
 	vk_select_gpu();
-	if (vk.error) return NULL;
 	
 	static float qpriority = 1.0;
 

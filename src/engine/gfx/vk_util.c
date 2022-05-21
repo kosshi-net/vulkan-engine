@@ -1,6 +1,7 @@
 #include "vk_util.h"
 
 #include "common.h"
+#include "engine.h"
 #include "gfx.h"
 #include "gfx_types.h"
 #include "res.h"
@@ -21,8 +22,6 @@ void vk_create_image_vma(
 	VkImage              *image,
 	VmaAllocation        *alloc
 ){
-	if (vk.error) return;
-
 	VkImageCreateInfo image_info = {
 		.sType           = VK_STRUCTURE_TYPE_IMAGE_CREATE_INFO,
 		.imageType       = VK_IMAGE_TYPE_2D,
@@ -43,10 +42,7 @@ void vk_create_image_vma(
 	};
 
 	VkResult ret = vmaCreateImage(vk.vma, &image_info, &alloc_info, image, alloc, NULL);
-	if (ret) {
-		vk.error = "Texture image creation failed (vma)";
-		return;
-	}
+	if (ret != VK_SUCCESS) engine_crash("vmaCreateImage failed");
 }
 
 void vk_create_buffer_vma(
@@ -56,7 +52,6 @@ void vk_create_buffer_vma(
 	VkBuffer             *buffer, 
 	VmaAllocation        *alloc
 ){
-	if (vk.error) return;
 	VkResult ret;
 
     VkBufferCreateInfo buffer_info = {
@@ -71,10 +66,7 @@ void vk_create_buffer_vma(
 	};
 	
 	ret = vmaCreateBuffer(vk.vma, &buffer_info, &alloc_info, buffer, alloc, NULL);
-    if (ret != VK_SUCCESS) {
-		vk.error = "Failed to allocate (vma)";
-		return;
-    }
+    if (ret != VK_SUCCESS) engine_crash("vmaCreateBuffer failed");
 }
 
 
@@ -100,8 +92,6 @@ void vk_upload_buffer(
 	size_t         size,
 	enum VkBufferUsageFlagBits usage
 ){
-	if (vk.error) return;
-
 	vk_create_buffer_vma(
 		size,
 		VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
@@ -109,8 +99,6 @@ void vk_upload_buffer(
 		&vk.staging_buffer,
 		&vk.staging_alloc
 	);
-
-	if(vk.error) return;
 
 	void *mapped;
 	vmaMapMemory(vk.vma, vk.staging_alloc, &mapped);
@@ -124,7 +112,6 @@ void vk_upload_buffer(
 		buffer,
 		alloc
 	);
-	if (vk.error) return;
 
 	vk_copy_buffer(vk.staging_buffer, *buffer, size);
 	vmaDestroyBuffer(vk.vma, vk.staging_buffer, vk.staging_alloc);
@@ -190,7 +177,7 @@ VkFormat vk_find_supported_format(
 			return formats[i];
 
 	}
-	vk.error = "No supported formats";
+	engine_crash("No supported formats");
 	return 0;
 }
 
@@ -218,14 +205,10 @@ VkFormat vk_find_depth_format()
 
 VkShaderModule vk_create_shader_module(enum Resource file)
 {
-	if (vk.error) return NULL;
-
 	size_t spv_size;
 	char  *spv = res_file(file, &spv_size);
-	if(spv == NULL) {
-		vk.error = "Failed to read spv file";
-		return NULL;
-	}
+	
+	if (!spv) engine_crash("Missing spv file");
 
 	VkShaderModuleCreateInfo create_info = {
 		.sType     = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO,
@@ -235,10 +218,7 @@ VkShaderModule vk_create_shader_module(enum Resource file)
 	VkShaderModule shader_module;
 	VkResult ret  = vkCreateShaderModule(vk.dev, &create_info, NULL, &shader_module);
 	free(spv);
-	if(ret != VK_SUCCESS) {
-		vk.error = "Failed to create shader module";
-		return NULL;
-	}
+	if(ret != VK_SUCCESS) engine_crash("vkCreateShaderModule failed");
 	
 	return shader_module;
 }
@@ -296,8 +276,7 @@ void vk_transition_image_layout(
 		src_stage             = VK_PIPELINE_STAGE_TRANSFER_BIT;
 		dst_stage             = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT;
 	} else {
-		vk.error = "Unsupported layout transition";
-		return;
+		engine_crash("Unsupported layout transition");
 	}
 
 	vkCmdPipelineBarrier(

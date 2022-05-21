@@ -12,19 +12,46 @@
 #include <stb_image.h>
 
 
+#ifndef NDEBUG
+#include "execinfo.h"
+void print_trace(void)
+{
+	void *buffer[10];
+	char **strings;
+	int size;
+
+	size = backtrace(buffer, LENGTH(buffer));
+	strings = backtrace_symbols(buffer, size);
+	
+	for (int i = 0; i < size; i++) {
+		fprintf(stderr, "%s\n", strings[i]);
+	}
+
+}
+#else
+void print_trace(void)
+{
+	return;
+}
+#endif
+
+void engine_crash_raw(const char *msg, const char *file, const char *func, int line)
+{
+	fprintf(stderr,"Crashed!\n%s:%s:%i :: %s\n", file, func, line, msg);
+	print_trace();
+	exit(1);
+}
+
+
 extern struct VkEngine vk;
 
-int engine_init()
+void engine_init()
 {
-	if (!glfwInit()) {
-		printf("GLFW Init failure");
-		return 1;
-	}
+	if (!glfwInit()) 
+		engine_crash("Can't init GLFW");
 
 	win_init();
 	gfx_init();
-
-	return 0;
 }
 
 void engine_destroy()
@@ -67,3 +94,4 @@ void engine_wait_idle(void)
 {
 	if(vk.dev) vkDeviceWaitIdle(vk.dev);
 }
+
