@@ -19,7 +19,7 @@ static struct VkTextContext vktxtctx[4];
 
 static VkVertexInputBindingDescription text_binding = {
 	.binding   = 0,
-	.stride    = sizeof(float) * 6, 
+	.stride    = sizeof(struct TextVertex),
 	.inputRate = VK_VERTEX_INPUT_RATE_VERTEX,
 };
 
@@ -27,14 +27,20 @@ static VkVertexInputAttributeDescription text_attributes[] = {
 	{
 		.binding  = 0,
 		.location = 0,
-		.format   = VK_FORMAT_R32G32B32_SFLOAT,
-		.offset   = 0,
+		.format   = VK_FORMAT_R32G32_SFLOAT,
+		.offset   = offsetof(struct TextVertex, pos),
 	},
 	{
 		.binding  = 0,
 		.location = 1,
-		.format   = VK_FORMAT_R32G32B32_SFLOAT,
-		.offset   = sizeof(float)*3,
+		.format   = VK_FORMAT_R32G32_SFLOAT,
+		.offset   = offsetof(struct TextVertex, uv),
+	},
+	{
+		.binding  = 0,
+		.location = 2,
+		.format   = VK_FORMAT_R8G8B8A8_UNORM,
+		.offset   = offsetof(struct TextVertex, color),
 	},
 };
 
@@ -154,8 +160,8 @@ void vk_text_create_pipeline(struct VkTextContext *restrict this)
 		.minDepthBounds        = 0.0f,
 		.maxDepthBounds        = 1.0f,
 		.stencilTestEnable     = VK_FALSE,
-		.front = {},
-		.back = {},
+		/*.front = {},
+		.back = {},*/
 	};
 
 	VkDescriptorSetLayout layouts[] = { 
@@ -342,7 +348,7 @@ void vk_text_destroy_fbdeps(struct VkTextContext *restrict this)
  * EXTERNAL *
  ************/
 
-void gfx_text_renderer_destroy(uint32_t id)
+void gfx_text_renderer_destroy(TextRenderer id)
 {
 	struct VkTextContext *restrict this = &vktxtctx[id];
 
@@ -368,14 +374,16 @@ void gfx_text_renderer_destroy(uint32_t id)
 static bool callbacks_bound = false;
 void text_swapchain_destroy_callback(void*arg)
 {
-	for (int i = 0; i < 1; i++) 
-		vk_text_destroy_fbdeps(&vktxtctx[i]);
+	for (ufast32_t i = 0; i < LENGTH(vktxtctx); i++) 
+		if(vktxtctx[i].ctx)
+			vk_text_destroy_fbdeps(&vktxtctx[i]);
 }
 
 void text_swapchain_create_callback(void*arg)
 {
-	for (int i = 0; i < 1; i++) 
-		vk_text_create_fbdeps(&vktxtctx[i]);
+	for (ufast32_t i = 0; i < LENGTH(vktxtctx); i++) 
+		if(vktxtctx[i].ctx)
+			vk_text_create_fbdeps(&vktxtctx[i]);
 }
 
 
@@ -389,7 +397,13 @@ uint32_t gfx_text_renderer_create(struct TextContext *txtctx)
 		callbacks_bound = true;
 	}
 
-	uint32_t id = 0;
+	uint32_t id;
+	for (id = 0; id < LENGTH(vktxtctx); id++) {
+		if (vktxtctx[id].ctx == NULL) 
+			goto free_found;
+	}
+	engine_crash("Too many text renderers");
+free_found:;
 	struct VkTextContext *this = &vktxtctx[id];
 	this->ctx = txtctx;
 
@@ -429,7 +443,7 @@ uint32_t gfx_text_renderer_create(struct TextContext *txtctx)
 		         VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
 	};
 
-	for (int i = 0; i < VK_FRAMES; i++) {
+	for (ufast32_t i = 0; i < VK_FRAMES; i++) {
 		vk_create_buffer_vma(
 			sizeof(struct TextUBO),
 			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
@@ -504,7 +518,7 @@ uint32_t gfx_text_renderer_create(struct TextContext *txtctx)
 }
 
 
-void gfx_text_draw(struct Frame *frame, uint32_t id)
+void gfx_text_draw(struct Frame *frame, TextRenderer id)
 {
 	struct VkTextContext *restrict this = &vktxtctx[id];
 	uint32_t f = frame->vk->id;

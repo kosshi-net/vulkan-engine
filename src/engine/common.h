@@ -18,3 +18,6 @@
 
 #define CGLM_FORCE_DEPTH_ZERO_TO_ONE
 
+typedef uint_fast32_t ufast32_t;
+typedef  int_fast32_t  fast32_t;
+

@@ -11,6 +11,7 @@ personal use.
 - Extensive use of C's designated initialziers makes the code the prettiest Vulkan you'll ever see 😊
 - Targets Vulkan 1.2 (so no dynamic render passes for now)
 
+
 ### Text rendering 
 - Good enough unicode support
 - Textured quads type 
@@ -19,7 +20,7 @@ personal use.
 - Supports fallback fonts (using a brute force approach)
 - Supports bidirectional text (GNU Fribidi)
 - Rudimentary support for line wrapping and basic layouting (centering, aligning)
-- TODO: Color
+- Color
 - TODO: Italic and bold
 - TODO: Vertical text
 - TODO: Cursor

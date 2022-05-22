@@ -52,20 +52,20 @@ void _log(
 
 
 #define log_info(...) \
-	_log(LOG_INFO,    __FILE__, __func__, __LINE__, __VA_ARGS__)
+	_log(LOG_INFO,     __FILE__, __func__, __LINE__, __VA_ARGS__)
 
 #define log_warn(...) \
-	_log(LOG_WARN,    __FILE__, __func__, __LINE__, __VA_ARGS__)
+	_log(LOG_WARN,     __FILE__, __func__, __LINE__, __VA_ARGS__)
  
 #define log_error(...) \
-	_log(LOG_ERROR,   __FILE__, __func__, __LINE__, __VA_ARGS__)
+	_log(LOG_ERROR,    __FILE__, __func__, __LINE__, __VA_ARGS__)
 
 #define log_critical(...) \
 	_log(LOG_CRITICAL, __FILE__, __func__, __LINE__, __VA_ARGS__)
 
 #ifndef NDEBUG
 #define log_debug(...) \
-	_log(LOG_DEBUG,   __FILE__, __func__, __LINE__, __VA_ARGS__)
+	_log(LOG_DEBUG,    __FILE__, __func__, __LINE__, __VA_ARGS__)
 #else 
 #define log_debug(...) ((void)0)
 #endif

@@ -104,7 +104,7 @@ void vk_load_teapot(void){
 	array_create(pot_vertex);
 	array_create(pot_index);
 
-	for ( int i = 0; i < mesh->group_count; i++ ){
+	for (int i = 0; i < mesh->group_count; i++){
 		log_info("Group %i) %s", i, mesh->groups[i].name);
 
 		fastObjGroup *group = &mesh->groups[i];
@@ -135,7 +135,7 @@ void vk_load_teapot(void){
 			}
 
 			
-			for( int ii = 0; ii < face_verts; ii++ ){
+			for (int ii = 0; ii < face_verts; ii++) {
 				fastObjIndex mi = mesh->indices[group->index_offset + gidx];
 					
 				array_push(pot_vertex, mesh->positions[3 * mi.p + 0]);
@@ -334,7 +334,7 @@ void vk_create_pipeline()
 		VK_NULL_HANDLE, 1, &pipeline_info, NULL, &this->pipeline
 	);
 
-	if(ret != VK_SUCCESS) engine_crash("vkCreateGraphicsPipelines failed");
+	if (ret != VK_SUCCESS) engine_crash("vkCreateGraphicsPipelines failed");
 
     vkDestroyShaderModule(vk.dev, frag_shader, NULL);	
     vkDestroyShaderModule(vk.dev, vert_shader, NULL);	
@@ -511,16 +511,17 @@ void vk_update_object_buffer(struct TeapotFrameData *frame)
 	double now   = glfwGetTime();
 
 	/* Clear previous frame */
-	if(frame->object_num){
+	if (frame->object_num){
 		vmaDestroyBuffer(vk.vma, frame->object_buffer, frame->object_alloc);
 	}
 	frame->object_num = 0;
 	
-	if( scene.object_num == 0 ) return;
+	if (scene.object_num == 0) return;
 	frame->object_num = scene.object_num;
 
 	/* Allocate */
 	struct ObjectUBO *object_buffer = malloc( sizeof(struct ObjectUBO) * scene.object_num );
+
 
 	vk_create_buffer_vma(
 		sizeof(struct ObjectUBO) * scene.object_num,
@@ -531,7 +532,7 @@ void vk_update_object_buffer(struct TeapotFrameData *frame)
 	);
 
 	/* Fill */
-	for( int i = 0; i < scene.object_num; i++ ){
+	for (int i = 0; i < scene.object_num; i++) {
 		mat4 model; 
 		glm_mat4_identity(model);
 
@@ -647,7 +648,7 @@ void vk_create_texture(void)
 	
 	if (!pixels) engine_crash("stbi_load failed (missing file?)");
 
-	VkDeviceSize   image_size = texw * texh * 4;
+	VkDeviceSize image_size = texw * texh * 4;
 	
 	vk_create_buffer_vma(
 		image_size,

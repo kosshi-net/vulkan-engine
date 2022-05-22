@@ -11,6 +11,18 @@ typedef uint32_t utf32_t;
 
 /* Structures */
 
+enum FontFamily {
+	FONT_SANS_16,
+	FONT_MONO_16,
+};
+
+
+struct TextVertex {
+	float   pos  [2];
+	float   uv   [2];
+	uint8_t color[4];
+};
+
 struct Atlas {
 	uint8_t  *bitmap;
 	uint32_t  bitmap_size;
@@ -39,11 +51,11 @@ struct Atlas {
 			uint32_t font;
 			uint32_t offset;
 
-			// Size of the bitmap
+			/* Size of the bitmap */
 			uint32_t w;
 			uint32_t h;
 
-			// Offsets
+			/* Offsets */
 			uint32_t x;
 			uint32_t y;
 
@@ -53,10 +65,17 @@ struct Atlas {
 	} *bin;
 };
 
+struct TextStyle {
+	uint8_t color[4];
+};
+
 struct TextContext {
 	struct Atlas atlas;
 
 	size_t       font_count;
+	bool         mute_logging;
+
+	struct TextStyle style;
 
 	struct Font {
 		FT_Face    ft_face;
@@ -73,7 +92,7 @@ struct TextContext {
 
 	Array(struct TextBlok *) block_buffer;
 
-	Array(float) vertex_buffer;
+	Array(struct TextVertex) vertex_buffer;
 	size_t glyph_count;
 };
 
@@ -91,10 +110,14 @@ struct GlyphQuad {
 	int32_t alignment_x;
 	int32_t alignment_y;
 	bool    alignment_newline;
+
+	uint8_t color[4];
 };
+
 
 struct TextBlock {
 	struct TextContext *ctx;
+
 
 	enum TextAlign {
 		TEXT_ALIGN_LEFT,
@@ -107,16 +130,17 @@ struct TextBlock {
 
 	uint32_t max_width;
 
-	Array(uint32_t)         utf32;
 	Array(struct GlyphQuad) quads;
 };
+
+
 
 /***********************
  * TextContext Methods *
  ***********************/
 
 struct TextContext *
-txtctx_create(void);
+txtctx_create(enum FontFamily);
 
 /* 
  * Queue block for rendering 
@@ -146,12 +170,18 @@ struct TextBlock *
 txtblk_create(struct TextContext *ctx, char*);
 
 /* 
- * Change the text of the block 
+ * Change the text of the block. Style can be NULL.
  */
-void txtblk_edit(struct TextBlock*, char*);
+void txtblk_edit(struct TextBlock*, const char*); // DEPRICATED
+void txtblk_set_text(struct TextBlock*, const char*, struct TextStyle*);
+
+/*
+ * Add text to the block. Style can be NULL.
+ */
+void txtblk_add_text(struct TextBlock*, const char*, struct TextStyle*);
 
 /* 
- * Set alignmentand modify quad positions to match.
+ * Set alignment and modify quad positions to match.
  * Is called by txtblk_edit with previously set values.
  * The defaults TEXT_ALIGN_LEFT and width=0 make this function a no-op. 
  *

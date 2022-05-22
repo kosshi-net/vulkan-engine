@@ -32,12 +32,21 @@ void _log(
 
 	static char buffer[1024];
 
-	int len = snprintf(buffer, sizeof(buffer), "[%s:%i] ", file, line);
+	int len = snprintf(buffer, sizeof(buffer), 
+		"(%c) %s:%i ", 
+		level_chars[level], file, line
+	);
+
+	while( len < 36 ) {
+		buffer[len] = '.';
+		len++;
+	}
+	buffer[len++] = ' ';
 	
 	vsnprintf(buffer+len, sizeof(buffer)-len, format, args);
 	va_end(args);
 
-	printf("(%c) %s\n", level_chars[level], buffer);
+	printf("%s\n", buffer);
 
 	if (level != LOG_CRITICAL) {
 		static struct LogEvent e;

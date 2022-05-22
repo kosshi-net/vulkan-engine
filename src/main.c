@@ -6,16 +6,19 @@
 #include "engine/gfx/teapot/teapot.h"
 #include "engine/gfx/text/text.h"
 #include "engine/gfx/text/vk_text.h"
+#include "engine/ppm.h"
 
 #include "input.h"
 #include "freecam.h"
+#include "term.h"
 
 int main(int argc, char**argv)
 {
+	log_info("Hello Vulkan!");
+	
 	engine_init();
 	input_init();
-	
-	log_info("Hello Vulkan!");
+	term_create();
 
 	struct {
 		struct TextContext *ctx;
@@ -32,13 +35,22 @@ int main(int argc, char**argv)
 		.ctl_width = 150
 	};
 
-	txt.ctx   = txtctx_create();
+	txt.ctx   = txtctx_create(FONT_SANS_16);
 	txt.hello = txtblk_create(txt.ctx, "Hello Vulkan!\n");
 	txt.stats = txtblk_create(txt.ctx, NULL);
 	txt.cam   = txtblk_create(txt.ctx, NULL);
-	txt.tea   = txtblk_create(txt.ctx, 
-		"Teapot ティーポット чайник ابريق الشاي 茶壶 קוּמקוּם τσαγιέρα\n"
-	);
+	txt.tea   = txtblk_create(txt.ctx, NULL);
+
+	txtblk_add_text(txt.tea, "Teapot ",       (struct TextStyle[]){{.color={255,255,255,255}}});
+	txtblk_add_text(txt.tea, "ティーポット ", (struct TextStyle[]){{.color={128,255,255,255}}});
+	txtblk_add_text(txt.tea, "чайник ",       (struct TextStyle[]){{.color={255,128,255,255}}});
+	txtblk_add_text(txt.tea, "ابريق الشاي ",  (struct TextStyle[]){{.color={255,255,128,255}}});
+	txtblk_add_text(txt.tea, "茶壶 ",         (struct TextStyle[]){{.color={128,128,255,255}}});
+	txtblk_add_text(txt.tea, "קוּמקוּם  ",      (struct TextStyle[]){{.color={255,128,128,255}}});
+	txtblk_add_text(txt.tea, "τσαγιέρα ",     (struct TextStyle[]){{.color={128,255,128,255}}});
+		//"Teapot ティーポット чайник ابريق الشاي 茶壶 קוּמקוּם τσαγιέρα\n"
+	txtblk_add_text(txt.tea, "\n",  NULL);
+	
 	txtctx_add(txt.hello);
 
 	txt.ctl_head = txtblk_create(txt.ctx, 
@@ -64,7 +76,7 @@ int main(int argc, char**argv)
 		"Space\n"
 		"RShift\n"
 		"ZX\n"
-		"DELETE\n"
+		"Delete\n"
 	);
 
 	txtblk_align(txt.ctl_head,  TEXT_ALIGN_CENTER, txt.ctl_width);
@@ -76,8 +88,6 @@ int main(int argc, char**argv)
 	uint32_t teagfx= gfx_teapot_renderer_create();
 
 	uint32_t frames = 0;
-	uint32_t text_bytes = 0;
-	uint32_t pcie_usage = 0;
 	uint32_t fps_max = 300;
 	uint32_t fps = 0;
 	double   last_title = 0.0;
@@ -87,6 +97,11 @@ int main(int argc, char**argv)
 	static struct Freecam freecam = {
 		.fov = 90.0,
 	};
+
+	gfx_util_write_ppm(txt.ctx->atlas.w, txt.ctx->atlas.h, txt.ctx->atlas.bitmap, "atlas.ppm");
+
+	log_warn("Test warning!");
+	log_error("Test error!");
 
 	while (!win_should_close()) {
 		
@@ -101,18 +116,17 @@ int main(int argc, char**argv)
 			frames = 0;
 			last_title += 1.0;
 
-			pcie_usage = text_bytes;
-			text_bytes = 0;
 		}
 
 		txtctx_clear(txt.ctx);
 		char print[1024];
-		snprintf(print, sizeof(print), "FPS: %i/%i, sleeped %.2fms, busy %.2fms, pcie %.2fMB/s\n",
-			fps, fps_max, sleep*1000.0, (delta-sleep)*1000.0,
-			pcie_usage / 1024.0 / 1024.0
+		snprintf(print, sizeof(print), 
+			"FPS: %i/%i, sleeped %.2fms, busy %.2fms\n",
+			fps, fps_max, sleep*1000.0, (delta-sleep)*1000.0
 		);
 		txtblk_edit(txt.stats, print);
-		snprintf(print, sizeof(print), "[%.2f, %.2f, %.2f], [%.1f, %.1f], [%.1f]\n",
+		snprintf(print, sizeof(print), 
+			"[%.2f, %.2f, %.2f], [%.1f, %.1f], [%.1f]\n",
 			freecam.pos[0], freecam.pos[1], freecam.pos[2], 
 			freecam.yaw, freecam.pitch,
 			freecam.fov
@@ -144,7 +158,8 @@ int main(int argc, char**argv)
 
 		gfx_teapot_draw(frame);
 		gfx_text_draw(frame, txt.gfx);
-		text_bytes += array_length(txt.ctx->vertex_buffer);
+		term_update(frame);
+
 		frame_end(frame);
 		engine_tick();
 
@@ -156,7 +171,7 @@ int main(int argc, char**argv)
 	}
 
 	engine_wait_idle();
-
+	term_destroy();
 	gfx_teapot_renderer_destroy(teagfx);
 	gfx_text_renderer_destroy(txt.gfx);
 

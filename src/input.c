@@ -73,7 +73,7 @@ void input_cursor_unlock(void)
 	input.cursor_locked = false;
 }
 
-void input_cursor_pos( double *x, double *y )
+void input_cursor_pos(double *x, double *y )
 {
 	glfwGetCursorPos(window, x, y);
 }

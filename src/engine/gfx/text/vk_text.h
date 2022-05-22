@@ -35,8 +35,10 @@ struct VkTextContext {
 	VmaAllocation                  texture_alloc;
 };
 
-uint32_t gfx_text_renderer_create (struct TextContext *);
-void     gfx_text_renderer_destroy(uint32_t);
-void     gfx_text_draw            (struct Frame*, uint32_t);
+typedef uint32_t TextRenderer;
+
+TextRenderer gfx_text_renderer_create (struct TextContext *);
+void         gfx_text_renderer_destroy(uint32_t);
+void         gfx_text_draw            (struct Frame*, uint32_t);
 
 

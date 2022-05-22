@@ -28,7 +28,7 @@ struct ARR_Head {
 	uint8_t data[];
 };
 
-#define array_create(arr) ARR_create(&arr, sizeof(typeof(*arr)))
+#define array_create(arr) ARR_create(&arr, sizeof(__typeof__(*arr)))
 static inline int ARR_create(void*p, size_t item_size)
 {
 	size_t max = 2;
@@ -53,7 +53,7 @@ static inline void ARR_destroy(void*p)
 	struct ARR_Head *arr = ARR_get_header(p);
 	ARR_free(arr);
 	*(void**)p = NULL;
-};
+}
 
 static inline int ARR_resize(struct ARR_Head **_arr, size_t newlen)
 {
@@ -74,7 +74,7 @@ static inline int ARR_shrink(void*p)
 	return ARR_resize(&arr, arr->length);
 }
 
-#define array_push(arr, ...) ARR_push(&arr,(typeof(*arr)[1]){__VA_ARGS__})
+#define array_push(arr, ...) ARR_push(&arr,(__typeof__(*arr)[1]){__VA_ARGS__})
 static inline void ARR_push(void*p, const void*data)
 {
 	struct ARR_Head *arr = ARR_get_header(p);
@@ -90,7 +90,7 @@ static inline void ARR_push(void*p, const void*data)
 
 	arr->length++; 
 	*(void**)p = arr->data;
-};
+}
 
 #define array_pop(arr) ARR_pop(&arr)
 static inline void ARR_pop(void*p)
@@ -119,7 +119,7 @@ static inline size_t ARR_sizeof(void*p)
  * Pointer to allocated block is returned. 
  * NOTE: Return pointer may become invalid if any reallocating array functions, 
  * like array_push, are called. */
-#define array_reserve(arr, count) ((typeof(arr))ARR_reserve(&arr, count))
+#define array_reserve(arr, count) ((__typeof__(arr))ARR_reserve(&arr, count))
 static inline void *ARR_reserve(void*p, size_t count)
 {
 	struct ARR_Head *arr = ARR_get_header(p);
@@ -146,7 +146,7 @@ static inline void ARR_clear(void*p)
 }
 
 
-#define array_back(arr) ( (typeof(arr))ARR_back(&arr) )
+#define array_back(arr) ( (__typeof__(arr))ARR_back(&arr) )
 static inline void *ARR_back(void*p)
 {
 	struct ARR_Head *arr = ARR_get_header(p);

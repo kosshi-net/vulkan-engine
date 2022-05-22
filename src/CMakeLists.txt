@@ -4,6 +4,7 @@ add_executable( engine
 	main.c
 	input.c
 	freecam.c
+	term.c
 
 	engine/engine.c
 	engine/res.c

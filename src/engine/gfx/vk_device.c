@@ -130,20 +130,20 @@ void vk_select_gpu(void)
 
 		vk_find_family_indices( dev[i] );
 
-		if(!vk.family_graphics_valid 
-		|| !vk.family_presentation_valid
+		if (!vk.family_graphics_valid 
+		 || !vk.family_presentation_valid
 		)   continue;
 
 		//if(dev_properties.deviceType != VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) 
 		//	continue;
-		if(!dev_features.geometryShader) 
+		if (!dev_features.geometryShader) 
 			continue;
 
 		struct VkSwapchainDetails *swap = vk_swapchain_details(dev[i]);
 
-		int ok = !( swap->format_num == 0 || swap->pmode_num  == 0);
+		int ok = !(swap->format_num == 0 || swap->pmode_num  == 0);
 		vk_swapchain_details_free(&swap);
-		if(!ok) return;
+		if (!ok) return;
 
 		log_info("Device OK");
 		array_push(valid_gpus, i);
@@ -151,12 +151,12 @@ void vk_select_gpu(void)
 		continue;
 	}
 
-	if(array_length(valid_gpus) == 0)
+	if (array_length(valid_gpus) == 0)
 		engine_crash("No suitable device");
-	if(array_length(valid_gpus) > 1)
+	if (array_length(valid_gpus) > 1)
 		engine_crash("Can't decide between multiple suitable devices (TODO)");
-	if(array_length(valid_gpus) == 1)
-		vk.dev_physical = dev[ valid_gpus[0] ];
+	if (array_length(valid_gpus) == 1)
+		vk.dev_physical = dev[valid_gpus[0]];
 	array_destroy(valid_gpus);
 }
 
@@ -188,9 +188,9 @@ VkDevice vk_create_device()
 
 	VkDeviceCreateInfo dev_create_info = {
 		.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO,
-		.pQueueCreateInfos    = qarray,
-		.queueCreateInfoCount = array_length(qarray),
-		.pEnabledFeatures = &device_features,
+		.pQueueCreateInfos       = qarray,
+		.queueCreateInfoCount    = array_length(qarray),
+		.pEnabledFeatures        = &device_features,
 		
 		.ppEnabledExtensionNames = vk.device_ext_req,
 		.enabledExtensionCount   = array_length(vk.device_ext_req),

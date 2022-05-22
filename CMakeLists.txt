@@ -36,6 +36,12 @@ set( VERSION_MINOR 1 )
 	if (DEBUG)
 		set (CMAKE_BUILD_TYPE Debug) 
 		set (CMAKE_ENABLE_EXPORTS TRUE)
+		add_compile_options(
+			-Wall 
+			-Wextra 
+			-Wpedantic
+			-Wno-unused-parameter
+		)
 	else()
 		set (CMAKE_BUILD_TYPE Release)
 	endif()

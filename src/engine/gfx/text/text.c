@@ -41,12 +41,12 @@ Array(utf32_t) text_bidi( Array(utf32_t) input )
 	return output;
 }
 
-Array(utf32_t) utf8_to_utf32(char*utf8)
+Array(utf32_t) utf8_to_utf32(const char *utf8)
 {
 	size_t inlen = strlen(utf8);
 	size_t outlen = 0;
 
-	char *c = utf8;
+	const char *c = utf8;
 	while (*c++) 
  	   if ( (*c&0xC0) != 0x80) 
 		   outlen++;
@@ -57,19 +57,19 @@ Array(utf32_t) utf8_to_utf32(char*utf8)
 
 	iconv_t cd = iconv_open("UCS-4LE", "UTF-8"); 
 
-	if( cd == (iconv_t)-1 ){
+	if (cd == (iconv_t)-1) {
 		if (errno == EINVAL) 
 			engine_crash("Conversion unavailable");
 		else
 			engine_crash("iconv_open failed");
 	}
 	
-	char*ci = utf8;
+	char*ci = (char*)utf8;
 	char*co = (char*)utf32;
 	size_t cil = inlen;
 	size_t col = outlen*4;
 	
-	int ret = iconv( cd, 
+	size_t ret = iconv( cd, 
 		&ci, &cil,
 		&co, &col
 	);
@@ -91,7 +91,7 @@ Array(char) utf32_to_utf8( Array(utf32_t) utf32 )
 
 	iconv_t cd = iconv_open("UTF-8", "UCS-4LE"); 
 
-	if( cd == (iconv_t)-1 ){
+	if (cd == (iconv_t)-1) {
 		if (errno == EINVAL) 
 			engine_crash("Conversion unavailable");
 		else
@@ -103,12 +103,12 @@ Array(char) utf32_to_utf8( Array(utf32_t) utf32 )
 	size_t cil = inlen;
 	size_t col = outlen;
 	
-	int ret = iconv( cd, 
+	size_t ret = iconv( cd, 
 		&ci, &cil,
 		&co, &col
 	);
 	
-	if(ret==(size_t)-1)
+	if (ret==(size_t)-1)
 		engine_crash("iconv failed");
 
 	return utf8;
@@ -123,40 +123,66 @@ void text_create_bin(
 	uint32_t slot_h
 );
 
-struct TextContext *txtctx_create()
+struct TextContext *txtctx_create(enum FontFamily family)
 {
-	char *fonts[] = {
-		"fonts/NotoSans-Regular.ttf",
-		"fonts/NotoSansCJK-Medium.ttc",
-		"fonts/NotoSansArabic-Regular.ttf",
-		"fonts/NotoSansHebrew-Regular.ttf",
-	};
-	
-	int ret; 
-	struct TextContext *ctx = calloc(sizeof(struct TextContext), 1);
+	Array(char*) fonts;
+	array_create(fonts);
 
-	ctx->font_count = LENGTH(fonts);
+	switch (family) {
+	case FONT_SANS_16:
+		array_push(fonts, "fonts/NotoSans-Regular.ttf");
+		array_push(fonts, "fonts/NotoSansCJK-Medium.ttc");
+		array_push(fonts, "fonts/NotoSansArabic-Regular.ttf");
+		array_push(fonts, "fonts/NotoSansHebrew-Regular.ttf");
+		break;
+	case FONT_MONO_16:
+		array_push(fonts, "fonts/TerminusTTF.ttf");
+		array_push(fonts, "fonts/sazanami-gothic.ttf");
+		break;
+	default:
+		engine_crash("Undefined font family");
+	}
+
+	uint32_t ret; 
+	struct TextContext *restrict ctx = calloc(sizeof(struct TextContext), 1);
+
+	ctx->font_count = array_length(fonts);
 	ctx->font_size = 16;
 	ctx->fonts = calloc(ctx->font_count, sizeof(struct Font));
+
+	memset(ctx->style.color, 0xFF, LENGTH(ctx->style.color));
 
 	array_create(ctx->vertex_buffer);
 	array_create(ctx->block_buffer);
 
-	if(!ft) {
+	if (!ft) {
 		ret = FT_Init_FreeType(&ft);
 		if(ret) 
 			engine_crash("FT_Init_FreeType failed");
 	}
 
-	for (int i = 0; i < ctx->font_count; i++) {
+	for (ufast32_t i = 0; i < ctx->font_count; i++) {
 		struct Font *f = &ctx->fonts[i];
 		ret = FT_New_Face(ft,
 			fonts[i],
 			0,
 			&f->ft_face
 		);
+
+		log_info("%s sizes:", fonts[i]);
+		for (fast32_t j = 0; j < f->ft_face->num_fixed_sizes; j++)
+		{
+			log_info("%ix%i", 
+				f->ft_face->available_sizes[j].width,
+				f->ft_face->available_sizes[j].height
+			);
+		}
+
 		if(ret) engine_crash("FT_New_face failed");
-		FT_Set_Pixel_Sizes(f->ft_face, 0, ctx->font_size);
+
+		ret = FT_Set_Pixel_Sizes(f->ft_face, 0, ctx->font_size);
+
+		if(ret) log_error("FT_Set_Pixel_Sizes failed");
 		f->hb_font = hb_ft_font_create_referenced(f->ft_face);
 		hb_ft_font_set_funcs(f->hb_font);
 	}
@@ -174,12 +200,11 @@ struct TextContext *txtctx_create()
 	atlas->bin_count = 3;
 	atlas->bin = calloc( sizeof(struct AtlasBin), atlas->bin_count );
 	
-	int bin = 0;
-
-	int page = ctx->font_size * 2;
-	int pages = atlas->h / page;
-	int pages_small = 1;
-	int pages_big   = 2;
+	fast32_t bin = 0;
+	fast32_t page = 16 * 2;
+	fast32_t pages = atlas->h / page;
+	fast32_t pages_small = 1;
+	fast32_t pages_big   = 4;
 
 	text_create_bin(
 		ctx, bin++,
@@ -225,7 +250,7 @@ void text_create_bin(
 	bin->slot_count = slot_rows * slot_cols;
 	bin->slot = calloc(sizeof(struct GlyphSlot), bin->slot_count);
 
-	for(int slot = 0; slot < bin->slot_count; slot++){
+	for (uint32_t slot = 0; slot < bin->slot_count; slot++){
 		
 		uint32_t slot_x = (slot % slot_cols);
 		uint32_t slot_y = (slot / slot_cols);
@@ -240,9 +265,9 @@ void text_create_bin(
 		
 		/* Fill the atlas with a checkerboard pattern */
 		if(1)
-		if( slot_x%2 == slot_y%2 ){
-			for( int x = 0; x < bin->w; x++ )
-			for( int y = 0; y < bin->h; y++ ){
+		if (slot_x%2 == slot_y%2) {
+			for( uint32_t x = 0; x < bin->w; x++ )
+			for( uint32_t y = 0; y < bin->h; y++ ){
 				atlas->bitmap[ bin->slot[slot].offset + x + atlas->w*y ] = 0x11;
 			}
 		}
@@ -253,8 +278,8 @@ struct GlyphSlot *text_find_glyph(
 		struct TextContext *ctx, 
 		uint32_t font, uint32_t code 
 ){
-	for( int bin  = 0; bin  < ctx->atlas.bin_count;           bin++ )
-	for( int s    = 0; s    < ctx->atlas.bin[bin].slot_count; s++ ){
+	for (uint32_t bin  = 0; bin  < ctx->atlas.bin_count;           bin++)
+	for (uint32_t s    = 0; s    < ctx->atlas.bin[bin].slot_count; s++) {
 		struct GlyphSlot *slot = &ctx->atlas.bin[bin].slot[s];
 		if (slot->code == code 
 		 && slot->font == font
@@ -262,6 +287,14 @@ struct GlyphSlot *text_find_glyph(
 		) return slot;
 	}
 	return NULL;
+}
+
+bool glyph_bit(const FT_GlyphSlot glyph, const int x, const int y)
+{
+	int32_t pitch = abs(glyph->bitmap.pitch);
+	uint8_t *row = &glyph->bitmap.buffer[pitch * y];
+    uint8_t c = row[x >> 3];
+    return (c & (128 >> (x & 7))) != 0;
 }
 
 struct GlyphSlot *text_cache_glyph( 
@@ -279,21 +312,22 @@ struct GlyphSlot *text_cache_glyph(
 	FT_Render_Glyph(glyph, FT_RENDER_MODE_NORMAL);
 	if(ret) goto error;
 
-	int h = glyph->bitmap.rows; 
-	int w = glyph->bitmap.width;
+	uint32_t h = glyph->bitmap.rows; 
+	uint32_t w = glyph->bitmap.width;
 
-	int bin_num ;
+	uint32_t bin_num ;
 	for ( bin_num = 0; bin_num < atlas->bin_count; bin_num++ ){
 		if( h <= atlas->bin[bin_num].h
 		&&  w <= atlas->bin[bin_num].w) goto bin_found;
 	}
-	log_error("No bin big enough! %i %i",w,h);
+	if (!ctx->mute_logging) 
+		log_error("No bin big enough! %i %i",w,h);
 	goto error;
 bin_found:
 	/* Use any free slot first, evict refcount=0 from cache as last resort */
 	bin = &ctx->atlas.bin[bin_num];
-	int slot_id = -1;
-	for (int i = 0; i < bin->slot_count; i++) {
+	uint32_t slot_id = UINT_MAX;
+	for (uint32_t i = 0; i < bin->slot_count; i++) {
 		if (bin->slot[i].valid == 0) {
 			slot_id = i;
 			goto slot_found;
@@ -301,39 +335,56 @@ bin_found:
 			slot_id = i;
 		}
 	}
-	if (slot_id > -1) goto slot_found;
-	log_error("Out of slots! %i %i", w, h);
+	if (slot_id != UINT_MAX) goto slot_found;
+	if (!ctx->mute_logging) 
+		log_error("Out of slots! %i %i", w, h);
 	goto error;
 slot_found:
 	slot = &bin->slot[slot_id];
 	slot->code = code;
 	slot->font = font_id;
-	slot->valid = true;
 
 	slot->x = glyph->bitmap_left;
 	slot->y = glyph->bitmap_top;
 	slot->w = w;
 	slot->h = h;
 
-	for( int x = 0; x < w; x++ )
-	for( int y = 0; y < h; y++ ){
-		uint8_t pixel = glyph->bitmap.buffer[ w * y + x ];
-		atlas->bitmap [ slot->offset + (x) + (y*atlas->w) ] = pixel;
+	switch (glyph->bitmap.pixel_mode) {
+	case FT_PIXEL_MODE_GRAY: 
+		for (ufast32_t x = 0; x < w; x++)
+		for (ufast32_t y = 0; y < h; y++) {
+			uint8_t pixel = glyph->bitmap.buffer[ w * y + x ];
+			atlas->bitmap [ slot->offset + (x) + (y*atlas->w) ] = pixel;
+		}
+		break;
+	case FT_PIXEL_MODE_MONO:
+		for (ufast32_t x = 0; x < w; x++)
+		for (ufast32_t y = 0; y < h; y++) {
+			uint8_t pixel = glyph_bit(glyph, x, y);
+			atlas->bitmap [ slot->offset + (x) + (y*atlas->w) ] = pixel*0xFF;
+		}
+		break;
+	default:
+		if (!ctx->mute_logging) 
+			log_error("Unsupported pixel format %i", glyph->format);
+		goto error;
 	}
 
+	slot->valid = true;
 	atlas->dirty = 1;
-
-	if(0)
-	gfx_util_write_ppm(ctx->atlas.w, ctx->atlas.h, ctx->atlas.bitmap, "atlas.ppm");
 
 	return slot;
 error:
-	log_error("Error caching font");
+	if (!ctx->mute_logging) 
+		log_warn("Further logs for this text context will be muted");
+	ctx->mute_logging = true;
 	return NULL;
 }
 
-Array(struct GlyphQuad) text_line(
+void push_text(
 	struct TextContext *ctx,
+	struct TextBlock   *block,
+	struct TextStyle   *style,
 	uint32_t *utf32,
 	uint32_t start,
 	uint32_t length
@@ -345,17 +396,20 @@ Array(struct GlyphQuad) text_line(
 		uint32_t             glyph_count;
 		uint32_t             seek;
 	} fc [ctx->font_count];
+	
+	const uint32_t FONT_MISSING = UINT_MAX;
 
 	/* Try different fonts for each character (aka cluster) until all filled. 
 	 * Not all clusters may actually get their own glyph: Harfbuzz may combine 
 	 * several characters into a single glyph. */
 
-	int32_t cluster_font[length];
-	int32_t clusters_missing = 0;
+	uint32_t cluster_font[length];
+	uint32_t clusters_missing = 0;
 
-	for (int i = 0; i < LENGTH(cluster_font); i++) cluster_font[i] = -1;
+	for (ufast32_t i = 0; i < LENGTH(cluster_font); i++) 
+		cluster_font[i] = FONT_MISSING;
 
-	for (int f = 0; f < ctx->font_count; f++) {
+	for (ufast32_t f = 0; f < ctx->font_count; f++) {
 		fc[f].buf = hb_buffer_create();
 		hb_buffer_set_direction (fc[f].buf, HB_DIRECTION_LTR);
 		hb_buffer_set_script    (fc[f].buf, HB_SCRIPT_COMMON);
@@ -371,16 +425,16 @@ Array(struct GlyphQuad) text_line(
 
 		fc[f].seek = 0;
 
-		for (int c = 0; c < LENGTH(cluster_font); c++) 
-			if (cluster_font[c] == -1)
+		for (ufast32_t c = 0; c < LENGTH(cluster_font); c++) 
+			if (cluster_font[c] == FONT_MISSING)
 				cluster_font[c] = f;
 
-		for (int g = 0; g < fc[f].glyph_count; g++) {
+		for (ufast32_t g = 0; g < fc[f].glyph_count; g++) {
 			uint32_t c = fc[f].glyph_info[g].cluster;
 
 			if (fc[f].glyph_info[g].codepoint == 0 && cluster_font[c] == f) {
 				clusters_missing++;
-				cluster_font[c] = -1;
+				cluster_font[c] = FONT_MISSING;
 			}
 		}
 
@@ -389,9 +443,6 @@ Array(struct GlyphQuad) text_line(
 	}
 
 	/* Create quads */
-
-	Array(struct GlyphQuad) quads;
-	array_create(quads);
 
 	hb_position_t cursor_x = 0;
 	hb_position_t cursor_y = 0;
@@ -403,7 +454,7 @@ Array(struct GlyphQuad) text_line(
 		if (f == -1) f = 0;
 
 		/* Find glyph generated for cluster (if any), store in g */
-		int32_t g = fc[f].seek; 
+		uint32_t g = fc[f].seek; 
 		while (fc[f].glyph_info[g].cluster != cluster) {
 			if (g >= fc[f].glyph_count)
 				goto next_cluster;
@@ -435,7 +486,7 @@ Array(struct GlyphQuad) text_line(
 			if (slot == NULL) continue;
 
 			slot->reference_count++;
-			array_push(quads, (struct GlyphQuad){
+			array_push(block->quads, (struct GlyphQuad){
 				.slot = slot,
 				.offset_x = (x_offset)/64+slot->x,
 				.offset_y = (y_offset)/64-slot->y,
@@ -443,6 +494,12 @@ Array(struct GlyphQuad) text_line(
 				.advance_y = y_advance/64,
 				.space     = space | newline,
 				.newline   = newline,
+				.color = {
+					style->color[0],
+					style->color[1],
+					style->color[2],
+					style->color[3],
+				}
 			});
 		}
 
@@ -450,13 +507,11 @@ next_cluster:
 		if (cluster == start+length-1) break;
 		cluster++;
 	}
-
-	return quads;
 }
 
 void txtblk_unreference_slots(struct TextBlock *block)
 {
-	for (int i = 0; i < array_length(block->quads); i++) {
+	for (uint32_t i = 0; i < array_length(block->quads); i++) {
 		block->quads[i].slot->reference_count--;
 	}
 }
@@ -466,7 +521,6 @@ struct TextBlock *txtblk_create(struct TextContext *ctx, char *utf8)
 	struct TextBlock *block = calloc(sizeof(*block), 1);
 	
 	array_create(block->quads);
-	array_create(block->utf32);
 
 	block->ctx = ctx;
 
@@ -477,21 +531,56 @@ struct TextBlock *txtblk_create(struct TextContext *ctx, char *utf8)
 	return block;
 }
 
-void txtblk_edit(struct TextBlock *restrict block, char*utf8)
+void txtblk_add_text(
+	struct TextBlock *restrict block, 
+	const char       *restrict utf8,
+	struct TextStyle *restrict style
+){
+	Array(utf32_t) temp = utf8_to_utf32(utf8);
+	Array(utf32_t) utf32 = text_bidi(temp);
+
+	push_text(
+		block->ctx,
+		block,
+		style==NULL ? &block->ctx->style : style,
+		utf32, 
+		0, array_length(utf32)-1
+	);
+
+	array_destroy(utf32);
+	array_destroy(temp);
+}
+
+void txtblk_set_text(
+	struct TextBlock *restrict block, 
+	const char       *restrict utf8,
+	struct TextStyle *restrict style
+){
+	txtblk_unreference_slots(block);
+	array_clear(block->quads);
+	txtblk_add_text(block, utf8, style);
+	txtblk_align(block, block->align, block->max_width);
+}
+
+void txtblk_edit(struct TextBlock *restrict block, const char *restrict utf8)
 {
 	txtblk_unreference_slots(block);
 
-	array_delete(block->utf32);
-	array_delete(block->quads);
 	Array(utf32_t) temp = utf8_to_utf32(utf8);
+	Array(utf32_t) utf32 = text_bidi(temp);
 
-	block->utf32 = text_bidi(temp);
+	array_clear(block->quads);
+	push_text(
+		block->ctx,
+		block,
+		&block->ctx->style,
+		utf32, 
+		0, array_length(utf32)-1
+	);
+
+	array_destroy(utf32);
 	array_destroy(temp);
 
-	block->quads = text_line(
-		block->ctx, block->utf32, 
-		0, array_length(block->utf32)-1
-	);
 	block->aligned = false;
 	
 	txtblk_align(block, block->align, block->max_width);
@@ -502,7 +591,6 @@ void*txtblk_destroy(struct TextBlock *block)
 	txtblk_unreference_slots(block);
 
 	array_delete(block->quads);
-	array_delete(block->utf32);
 	free(block);
 	return NULL;
 }
@@ -521,10 +609,10 @@ void txtblk_align(
 
 	if (block->max_width != 0) {
 		struct GlyphQuad *last = NULL;
-		int32_t cursor_x = 0;
-		int32_t cursor_word = 0;
+		uint32_t cursor_x = 0;
+		uint32_t cursor_word = 0;
 
-		for (int g = 0; g < array_length(block->quads); g++) {
+		for (uint32_t g = 0; g < array_length(block->quads); g++) {
 			struct GlyphQuad *quad = block->quads+g;
 
 			if (quad->newline) {
@@ -557,7 +645,7 @@ void txtblk_align(
 		int32_t  line_width = 0;
 		uint32_t line_start = 0;
 
-		for (int g = 0; g < array_length(block->quads); g++) {
+		for (ufast32_t g = 0; g < array_length(block->quads); g++) {
 			struct GlyphQuad *quad = block->quads+g;
 
 			if (quad->newline || g+1 == array_length(block->quads)) {
@@ -566,7 +654,7 @@ void txtblk_align(
 				if (block->align == TEXT_ALIGN_CENTER) 
 					offset = offset * 0.5;
 
-				for (int j = line_start; j < g+1; j++) {
+				for (ufast32_t j = line_start; j < g+1; j++) {
 					block->quads[j].offset_x   += offset;
 					block->quads[j].alignment_x = offset;
 				}
@@ -587,7 +675,7 @@ void txtblk_unalign( struct TextBlock *restrict block)
 		return;
 
 	block->aligned = false;
-	for (int g = 0; g < array_length(block->quads); g++) {
+	for (ufast32_t g = 0; g < array_length(block->quads); g++) {
 		struct GlyphQuad *quad = block->quads+g;
 		
 		if (quad->alignment_newline) {
@@ -603,8 +691,11 @@ void txtblk_unalign( struct TextBlock *restrict block)
 	}
 }
 
-void txtblk_set_alignment( struct TextBlock *block,  enum TextAlign align, uint32_t max_width )
-{
+void txtblk_set_alignment(
+	struct TextBlock *block, 
+	enum TextAlign align, 
+	uint32_t max_width 
+){
 	block->align = align;
 	block->max_width = max_width;
 }
@@ -646,41 +737,44 @@ void txtctx_add(struct TextBlock *block)
 
 	struct TextContext *ctx = block->ctx;
 
-	for (int g = 0; g < array_length(block->quads); g++)
+	for (ufast32_t g = 0; g < array_length(block->quads); g++)
 	{
-		int32_t x = block->quads[g].offset_x + ctx->root_x + ctx->cursor_x;
-		int32_t y = block->quads[g].offset_y + ctx->root_y + ctx->cursor_y 
+		struct GlyphQuad *restrict quad = &block->quads[g];
+		int32_t x = quad->offset_x + ctx->root_x + ctx->cursor_x;
+		int32_t y = quad->offset_y + ctx->root_y + ctx->cursor_y 
 			+ ctx->font_size;
 
-		ctx->cursor_x += block->quads[g].advance_x;
-		ctx->cursor_y += block->quads[g].advance_y;
+		ctx->cursor_x += quad->advance_x;
+		ctx->cursor_y += quad->advance_y;
 
-		if (block->quads[g].newline) {
+		if (quad->newline) {
 			ctx->cursor_x = 0;
 			ctx->cursor_y += ctx->font_size;
 		}
 
-		if (block->quads[g].space) 
+		if (quad->space) 
 			continue;
 
 		ctx->glyph_count++;
 		
-		int32_t w = block->quads[g].slot->w;
-		int32_t h = block->quads[g].slot->h;
+		int32_t w = quad->slot->w;
+		int32_t h = quad->slot->h;
 
-		float uv_x = block->quads[g].slot->atlas_x / (float)ctx->atlas.w;
-		float uv_y = block->quads[g].slot->atlas_y / (float)ctx->atlas.h;
+		float uv_x = quad->slot->atlas_x / (float)ctx->atlas.w;
+		float uv_y = quad->slot->atlas_y / (float)ctx->atlas.h;
 		float uv_w = w / (float)ctx->atlas.w;
 		float uv_h = h / (float)ctx->atlas.h;
 
 		for (int i = 0; i < 4; i++) {
-			float *vertex = array_reserve(ctx->vertex_buffer, 6);
-			*vertex++ = (x + w * quad_vertex[i][0]);
-			*vertex++ = (y + h * quad_vertex[i][1]);
-			*vertex++ = 0;
-			*vertex++ = (uv_x + uv_w * (float)quad_vertex[i][0]);
-			*vertex++ = (uv_y + uv_h * (float)quad_vertex[i][1]);
-			*vertex++ = 0;
+			struct TextVertex vert;
+			vert.pos[0] = (x + w * quad_vertex[i][0]);
+			vert.pos[1] = (y + h * quad_vertex[i][1]);
+
+			vert.uv[0] = (uv_x + uv_w * (float)quad_vertex[i][0]);
+			vert.uv[1] = (uv_y + uv_h * (float)quad_vertex[i][1]);
+
+			memcpy(vert.color, quad->color, sizeof(vert.color));
+			array_push(ctx->vertex_buffer, vert);
 		}
 	}
 }
@@ -695,9 +789,9 @@ uint16_t *txt_create_shared_index_buffer(size_t max_glyphs, size_t *size)
 	*size = max_glyphs * sizeof(quad_index);
 	uint16_t *buffer = malloc(*size);
 
-	for (int i = 0; i < max_glyphs; i++) {
-		int offset = LENGTH(quad_index) * i;
-		for (int j = 0; j < LENGTH(quad_index); j++)
+	for (ufast32_t i = 0; i < max_glyphs; i++) {
+		fast32_t offset = LENGTH(quad_index) * i;
+		for (ufast32_t j = 0; j < LENGTH(quad_index); j++)
 			buffer[offset+j] = 4*i + quad_index[j];
 	}
 
