@@ -3,7 +3,7 @@
 #include "engine/log/log.h"
 #include "engine/gfx/gfx.h"
 #include "engine/gfx/camera.h"
-#include "engine/gfx/teapot/teapot.h"
+#include "teapot/teapot.h"
 #include "engine/gfx/text/text.h"
 #include "engine/gfx/text/vk_text.h"
 #include "engine/ppm.h"

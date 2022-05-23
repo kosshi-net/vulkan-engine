@@ -110,7 +110,7 @@ void vk_create_framebuffers()
 	vk.framebuffers_num = vk.swapchain_img_num;
 	vk.framebuffers     = malloc(sizeof(VkFramebuffer) * vk.framebuffers_num);
 
-	for(int i = 0; i < vk.framebuffers_num; i++){
+	for(fast32_t i = 0; i < vk.framebuffers_num; i++){
 		VkImageView attachments[] = {
 			vk.swapchain_img_view[i],
 			vk.depth_view,
@@ -149,6 +149,9 @@ void vk_create_cmd_pool()
 	if(ret != VK_SUCCESS) engine_crash("vkCreateCommandPool failed");
 }
 
+/**********
+ * FRAMES *
+ *********/
 
 void vk_init_frame( struct VkFrame *frame )
 {
@@ -249,9 +252,6 @@ void vk_create_descriptor_pool()
 
 void vk_recreate_swapchain()
 {
-	double now = glfwGetTime();
-	if(vk.last_resize + 0.25 > now ) return;
-
 	int width = 0, height = 0;
 	glfwGetFramebufferSize(vk.window, &width, &height);
 	while(width==0 || height == 0){
@@ -260,7 +260,6 @@ void vk_recreate_swapchain()
 	}
 
 	vkDeviceWaitIdle(vk.dev);
-	log_info("Recreating swapchain");
 
 	event_fire(EVENT_VK_SWAPCHAIN_DESTROY, NULL);
 
@@ -268,15 +267,10 @@ void vk_recreate_swapchain()
 	vk_create_swapchain();
 	vk_create_image_views();
 
-	vk_create_renderpass();
-
 	vk_create_depth_resources();
 	vk_create_framebuffers();
 
 	event_fire(EVENT_VK_SWAPCHAIN_CREATE, NULL);
-
-	vk.framebuffer_resize = false;
-	vk.last_resize = now;
 }
 
 
@@ -331,7 +325,24 @@ struct VkFrame *gfx_frame_get()
 		.clearValueCount   = LENGTH(clear_color),
 		.pClearValues = clear_color,
 	};
-	vkCmdBeginRenderPass( cmd, &pass_info, VK_SUBPASS_CONTENTS_INLINE );
+	vkCmdBeginRenderPass(cmd, &pass_info, VK_SUBPASS_CONTENTS_INLINE);
+
+	VkRect2D scissor = {
+		.offset = {.x=0, .y=0},
+		.extent = vk.swapchain_extent,
+	};
+	vkCmdSetScissor(cmd, 0, 1, &scissor);
+
+	VkViewport viewport = {
+		.x        = 0.0,
+		.y        = 0.0,
+		.width    = scissor.extent.width,
+		.height   = scissor.extent.height,
+		.minDepth = 0.0,
+		.maxDepth = 1.0,
+	};
+
+	vkCmdSetViewport(cmd, 0, 1, &viewport);
 
 	return frame;
 }
@@ -521,6 +532,7 @@ void gfx_init(void)
 void gfx_destroy()
 {
 	vk_destroy_swapchain();
+	vkDestroyRenderPass(vk.dev, vk.renderpass, NULL);
 	vkDestroySampler(vk.dev, vk.texture_sampler, NULL);
 	for(int i = 0; i < VK_FRAMES; i++)
 		vk_destroy_frame( &vk.frames[i] );

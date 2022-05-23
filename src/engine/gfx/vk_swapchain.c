@@ -53,7 +53,7 @@ void vk_swapchain_details_free(struct VkSwapchainDetails **swap){
 
 VkSurfaceFormatKHR *vk_choose_swap_format( struct VkSwapchainDetails *swap)
 {
-	for (int i = 0; i < swap->format_num; i++) {
+	for (ufast32_t i = 0; i < swap->format_num; i++) {
 		VkSurfaceFormatKHR *format = swap->format+i;
 		if (format->format == VK_FORMAT_B8G8R8A8_SRGB
 		 && format->colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR
@@ -65,7 +65,7 @@ VkSurfaceFormatKHR *vk_choose_swap_format( struct VkSwapchainDetails *swap)
 
 VkPresentModeKHR vk_choose_present_mode( struct VkSwapchainDetails *swap )
 {
-	for (int i = 0; i < swap->pmode_num; i++){
+	for (ufast32_t i = 0; i < swap->pmode_num; i++){
 		if (swap->pmode[i] == VK_PRESENT_MODE_MAILBOX_KHR)
 			return swap->pmode[i];
 	}
@@ -78,12 +78,12 @@ VkExtent2D vk_choose_extent( struct VkSwapchainDetails *swap )
 	if (cpbl->currentExtent.width != UINT32_MAX) {
 		return cpbl->currentExtent;
 	} else {
-		int width, height;
+		int32_t width, height;
 
 		glfwGetFramebufferSize(vk.window, &width, &height);
 		
 		VkExtent2D extent = {
-			.width = width,
+			.width  = width,
 			.height = height,
 		};
 	
@@ -111,8 +111,11 @@ void vk_create_swapchain(void)
 	VkPresentModeKHR   pmode          =  vk_choose_present_mode(swap);
 	VkExtent2D         extent         =  vk_choose_extent(swap);
 
+	/* There's an unavoidable race condition here :( khronos pls fix 
+	 * https://github.com/KhronosGroup/Vulkan-Docs/issues/1144 */
+
 	uint32_t image_num =swap->capabilities.minImageCount+1;
-	if (swap->capabilities.maxImageCount > 0 )
+	if (swap->capabilities.maxImageCount > 0)
 		image_num = MIN(image_num, swap->capabilities.maxImageCount);
 
 	VkSwapchainCreateInfoKHR swap_create = {
@@ -159,14 +162,13 @@ void vk_create_swapchain(void)
 
 	vk.swapchain_img_format = surface_format.format;
 	vk.swapchain_extent = extent;
-	
 }
 
 void vk_create_image_views(void)
 {
 	vk.swapchain_img_view = malloc(sizeof(VkImageView) * vk.swapchain_img_num);
 	
-	for (int i = 0; i < vk.swapchain_img_num; i++) {
+	for (ufast32_t i = 0; i < vk.swapchain_img_num; i++) {
 		VkImageViewCreateInfo create_info = {
 			.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,
 			.image    = vk.swapchain_img[i],
@@ -192,16 +194,14 @@ void vk_create_image_views(void)
 
 void vk_destroy_swapchain()
 {
-    vkDestroyRenderPass(vk.dev, vk.renderpass, NULL);
-
-	for (int i = 0; i < vk.swapchain_img_num; i++)
+	for (ufast32_t i = 0; i < vk.swapchain_img_num; i++)
 		vkDestroyImageView(vk.dev, vk.swapchain_img_view[i], NULL);
 
 	vkDestroySwapchainKHR(vk.dev, vk.swapchain, NULL);
 	vkDestroyImageView(vk.dev, vk.depth_view, NULL);
 	vmaDestroyImage(vk.vma, vk.depth_image, vk.depth_alloc);
 
-	for (int i = 0; i < vk.framebuffers_num; i++)
+	for (ufast32_t i = 0; i < vk.framebuffers_num; i++)
 		vkDestroyFramebuffer(vk.dev, vk.framebuffers[i], NULL);
 }
 

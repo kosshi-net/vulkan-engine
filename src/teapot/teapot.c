@@ -1,6 +1,6 @@
 #include "gfx/gfx.h"
 #include "gfx/vk_util.h"
-#include "gfx/teapot/teapot.h"
+#include "teapot/teapot.h"
 #include "gfx/camera.h"
 #include "common.h"
 #include "log/log.h"
@@ -227,6 +227,18 @@ void vk_create_pipeline()
 		.pScissors = &scissor,
 	};
 
+	VkDynamicState dynamic_state[] = {
+		VK_DYNAMIC_STATE_VIEWPORT, 
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+
+	VkPipelineDynamicStateCreateInfo dynamic_info = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+		.flags = 0,
+		.dynamicStateCount = LENGTH(dynamic_state),
+		.pDynamicStates    = dynamic_state 
+	};
+
 	VkPipelineRasterizationStateCreateInfo rasterizer_info = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 		.depthClampEnable        = VK_FALSE,
@@ -322,7 +334,7 @@ void vk_create_pipeline()
 		.pMultisampleState   = &multisampling_info,
 		.pDepthStencilState  = &depth_stencil_info,
 		.pColorBlendState    = &blending_info, 
-		.pDynamicState       = NULL,
+		.pDynamicState       = &dynamic_info,
 		.layout              = this->pipeline_layout,
 		.renderPass          = vk.renderpass,
 		.subpass             = 0,
@@ -719,18 +731,6 @@ void vk_create_texture_view()
 	if (ret != VK_SUCCESS) engine_crash("vkCreateImageView failed");
 }
 
-void gfx_teapot_swapchain_deps_create(void*arg)
-{
-	vk_create_pipeline();
-}
-
-void gfx_teapot_swapchain_deps_destroy(void*arg)
-{
-	vkDestroyPipeline(vk.dev, this->pipeline, NULL);
-	vkDestroyPipelineLayout(vk.dev, this->pipeline_layout, NULL);
-}
-
-
 uint32_t gfx_teapot_renderer_create(void)
 {
 	this = calloc(sizeof(*this), 1);
@@ -755,24 +755,19 @@ uint32_t gfx_teapot_renderer_create(void)
 		VK_BUFFER_USAGE_INDEX_BUFFER_BIT
 	);
 
-	gfx_teapot_swapchain_deps_create(NULL);
+	vk_create_pipeline();
 
 	for (int i = 0; i < VK_FRAMES; i++) {
 		teapot_frame_create(&this->frame[i]);
 	}
-
-	event_bind(EVENT_VK_SWAPCHAIN_DESTROY, &gfx_teapot_swapchain_deps_destroy);
-	event_bind(EVENT_VK_SWAPCHAIN_CREATE,  &gfx_teapot_swapchain_deps_create);
 
 	return 1;
 }
 
 void gfx_teapot_renderer_destroy(uint32_t handle)
 {
-	event_unbind(EVENT_VK_SWAPCHAIN_DESTROY, &gfx_teapot_swapchain_deps_destroy);
-	event_unbind(EVENT_VK_SWAPCHAIN_CREATE,  &gfx_teapot_swapchain_deps_create);
-
-	gfx_teapot_swapchain_deps_destroy(NULL);
+	vkDestroyPipeline(vk.dev, this->pipeline, NULL);
+	vkDestroyPipelineLayout(vk.dev, this->pipeline_layout, NULL);
 
 	for (int i = 0; i < VK_FRAMES; i++) {
 		teapot_frame_destroy(&this->frame[i]);

@@ -104,6 +104,18 @@ void vk_text_create_pipeline(struct VkTextContext *restrict this)
 		.pScissors = &scissor,
 	};
 
+	VkDynamicState dynamic_state[] = {
+		VK_DYNAMIC_STATE_VIEWPORT, 
+		VK_DYNAMIC_STATE_SCISSOR
+	};
+
+	VkPipelineDynamicStateCreateInfo dynamic_info = {
+		.sType = VK_STRUCTURE_TYPE_PIPELINE_DYNAMIC_STATE_CREATE_INFO,
+		.flags = 0,
+		.dynamicStateCount = LENGTH(dynamic_state),
+		.pDynamicStates    = dynamic_state 
+	};
+
 	VkPipelineRasterizationStateCreateInfo rasterizer_info = {
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_RASTERIZATION_STATE_CREATE_INFO,
 		.rasterizerDiscardEnable = VK_FALSE,
@@ -192,7 +204,7 @@ void vk_text_create_pipeline(struct VkTextContext *restrict this)
 		.pMultisampleState   = &multisampling_info,
 		.pDepthStencilState  = &depth_stencil_info,
 		.pColorBlendState    = &blending_info, 
-		.pDynamicState       = NULL,
+		.pDynamicState       = &dynamic_info,
 		.layout              = this->pipeline_layout,
 		.renderPass          = vk.renderpass,
 		.subpass             = 0,
@@ -371,31 +383,9 @@ void gfx_text_renderer_destroy(TextRenderer id)
 	vk_text_destroy_fbdeps(this);
 }
 
-static bool callbacks_bound = false;
-void text_swapchain_destroy_callback(void*arg)
-{
-	for (ufast32_t i = 0; i < LENGTH(vktxtctx); i++) 
-		if(vktxtctx[i].ctx)
-			vk_text_destroy_fbdeps(&vktxtctx[i]);
-}
-
-void text_swapchain_create_callback(void*arg)
-{
-	for (ufast32_t i = 0; i < LENGTH(vktxtctx); i++) 
-		if(vktxtctx[i].ctx)
-			vk_text_create_fbdeps(&vktxtctx[i]);
-}
-
-
 uint32_t gfx_text_renderer_create(struct TextContext *txtctx)
 {
 	VkResult ret; 
-
-	if (!callbacks_bound) {
-		event_bind(EVENT_VK_SWAPCHAIN_CREATE, &text_swapchain_create_callback);
-		event_bind(EVENT_VK_SWAPCHAIN_DESTROY,&text_swapchain_destroy_callback);
-		callbacks_bound = true;
-	}
 
 	uint32_t id;
 	for (id = 0; id < LENGTH(vktxtctx); id++) {
