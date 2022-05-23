@@ -386,7 +386,6 @@ void gfx_text_renderer_destroy(TextRenderer id)
 uint32_t gfx_text_renderer_create(struct TextContext *txtctx)
 {
 	VkResult ret; 
-
 	uint32_t id;
 	for (id = 0; id < LENGTH(vktxtctx); id++) {
 		if (vktxtctx[id].ctx == NULL) 
@@ -527,11 +526,19 @@ void gfx_text_draw(struct Frame *frame, TextRenderer id)
 	memcpy(data, &ubo, sizeof(ubo));
 	vmaUnmapMemory(vk.vma, this->frame[f].uniform_alloc);
 
-	this->frame[f].index_count = this->ctx->glyph_count * 6;
+	size_t glyphs = this->ctx->glyph_count;
 
-	memcpy(this->frame[f].vertex_mapping, 
+	if (glyphs > TEXT_FRAME_MAX_GLYPHS) {
+		log_error("Max glyphs exceeded (%li > %li)", 
+			glyphs, TEXT_FRAME_MAX_GLYPHS
+		);
+		glyphs = TEXT_FRAME_MAX_GLYPHS;
+	}
+
+	memcpy(
+		this->frame[f].vertex_mapping, 
 		this->ctx->vertex_buffer, 
-		array_sizeof(this->ctx->vertex_buffer)
+		glyphs * TEXT_VERTICES_PER_GLYPH * sizeof(struct TextVertex)
 	);
 
 	vmaFlushAllocation(vk.vma, this->frame[f].vertex_alloc, 0, 
@@ -556,7 +563,7 @@ void gfx_text_draw(struct Frame *frame, TextRenderer id)
 		&this->frame[f].descriptor_set, 0, NULL
 	);
 
-	vkCmdDrawIndexed(cmd, this->frame[f].index_count, 1,0,0,0);
+	vkCmdDrawIndexed(cmd, glyphs * TEXT_INDICES_PER_GLYPH, 1,0,0,0);
 }
 
 

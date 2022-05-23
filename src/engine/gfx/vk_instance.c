@@ -12,7 +12,7 @@ extern struct VkEngine vk;
 
 bool vk_instance_ext_check(const char*ext)
 {
-	for (int i = 0; i < array_length(vk.instance_ext_avbl); i++) {
+	for (size_t i = 0; i < array_length(vk.instance_ext_avbl); i++) {
 		const char *name = vk.instance_ext_avbl[i].extensionName;
 		if (strcmp(ext, name)==0) 
 			goto found;
@@ -38,7 +38,7 @@ void vk_instance_ext_get_avbl(void)
 	vkEnumerateInstanceExtensionProperties(NULL, &num, data);
 
 	if(vk._verbose)
-		for( int i = 0; i < array_length(vk.instance_ext_avbl); i++ ){
+		for (size_t i = 0; i < array_length(vk.instance_ext_avbl); i++ ){
 			const char *name = vk.instance_ext_avbl[i].extensionName;
 			log_debug("%s", name );
 		}
@@ -55,7 +55,7 @@ void vk_instance_ext_add(const char *ext)
 
 bool vk_validation_check(const char*ext)
 {
-	for (int i = 0; i < array_length(vk.validation_avbl); i++) {
+	for (size_t i = 0; i < array_length(vk.validation_avbl); i++) {
 		const char *name = vk.validation_avbl[i].layerName;
 		if (strcmp(ext, name)==0) goto found;
 	}
@@ -79,7 +79,7 @@ void vk_validation_get_avbl(void)
 	vkEnumerateInstanceLayerProperties(&num, data);
 
 	if (vk._verbose)
-		for( int i = 0; i < array_length(vk.validation_avbl); i++ ){
+		for (size_t i = 0; i < array_length(vk.validation_avbl); i++ ){
 			const char *name = vk.validation_avbl[i].layerName;
 			log_debug("%s", name );
 		}
@@ -90,23 +90,92 @@ void vk_validation_add(const char *ext)
 	array_push(vk.validation_req, ext);
 }
 
+static VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(
+	VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
+	VkDebugUtilsMessageTypeFlagsEXT             messageType,
+	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
+	void* pUserData
+){
+	
+	log_error("%s", pCallbackData->pMessage);
+	//std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+
+    return VK_FALSE;
+}
+
+void vk_destroy_messenger()
+{
+	PFN_vkDestroyDebugUtilsMessengerEXT pfnDestroyDebugUtilsMessengerEXT = 
+		(PFN_vkDestroyDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
+			vk.instance, "vkDestroyDebugUtilsMessengerEXT"
+		);
+
+	if (pfnDestroyDebugUtilsMessengerEXT == NULL)
+		engine_crash("pfnDestroyDebugUtilsMessengerEXT failed to load");
+
+	pfnDestroyDebugUtilsMessengerEXT(vk.instance, vk.messenger, NULL);
+}
+
+void vk_create_messenger()
+{
+    PFN_vkCreateDebugUtilsMessengerEXT pfnCreateDebugUtilsMessengerEXT = 
+		(PFN_vkCreateDebugUtilsMessengerEXT) vkGetInstanceProcAddr(
+			vk.instance, "vkCreateDebugUtilsMessengerEXT"
+		);
+
+	if(pfnCreateDebugUtilsMessengerEXT == NULL)
+		engine_crash("pfnCreateDebugUtilsMessengerEXT failed to load");
+
+	VkDebugUtilsMessengerCreateInfoEXT debug_info = {
+		.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
+		.messageSeverity =
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | 
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
+			0,
+		.messageType = 
+			VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | 
+			VK_DEBUG_UTILS_MESSAGE_TYPE_VALIDATION_BIT_EXT | 
+			VK_DEBUG_UTILS_MESSAGE_TYPE_PERFORMANCE_BIT_EXT |
+			0,
+		.pfnUserCallback = vk_debug_callback,
+		.pUserData = NULL,
+	};
+
+	VkResult ret;
+	ret = pfnCreateDebugUtilsMessengerEXT(
+		vk.instance, 
+		&debug_info,
+		NULL,
+		&vk.messenger
+	);
+	if (ret != VK_SUCCESS) 
+		engine_crash("pfnCreateDebugUtilsMessengerEXT failed");
+
+}
+
 /************
  * INSTANCE *
  ************/
+void vk_destroy_instance(void) 
+{
+	vk_destroy_messenger();
+	vkDestroyInstance(vk.instance, NULL);
+}
 
 void vk_create_instance(void)
 {
 	/* Add GLFW extensions */
 	uint32_t glfw_ext_num = 0;
 	const char** glfw_ext = glfwGetRequiredInstanceExtensions(&glfw_ext_num);
-	for(int i = 0; i < glfw_ext_num; i++)
+	for (ufast32_t i = 0; i < glfw_ext_num; i++)
 		vk_instance_ext_add(glfw_ext[i]);
 
-	for (int i = 0; i < array_length(vk.instance_ext_req); i++)
+	for (size_t i = 0; i < array_length(vk.instance_ext_req); i++)
 		if (!vk_instance_ext_check(vk.instance_ext_req[i])) 
 			engine_crash("Instance extension requirements not met");
 		
-	for (int i = 0; i < array_length(vk.validation_req); i++)
+	for (size_t i = 0; i < array_length(vk.validation_req); i++)
 		if (!vk_validation_check(vk.validation_req[i])) 
 			engine_crash("Validation layer requirements requirements not met");
 		
@@ -133,5 +202,7 @@ void vk_create_instance(void)
 	VkResult ret = vkCreateInstance(&create_info, NULL, &vk.instance);
 	
 	if (ret != VK_SUCCESS) engine_crash("vkCreateInstance failed");
+
+	vk_create_messenger();
 }
 

@@ -35,6 +35,8 @@ struct VkEngine {
 	 * Core resources
 	 */
 
+	VkDebugUtilsMessengerEXT       messenger;
+
 	VmaAllocator                   vma;
 
 	VkInstance                     instance;

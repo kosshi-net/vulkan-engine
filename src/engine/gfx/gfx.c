@@ -500,6 +500,7 @@ void gfx_init(void)
 	event_bind(EVENT_WIN_RESIZE, vk_resize_callback);
 
 	vk_instance_ext_get_avbl();
+	vk_instance_ext_add(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	vk_validation_get_avbl();
 	vk_validation_add("VK_LAYER_KHRONOS_validation");
 	vk_create_instance(); 
@@ -542,6 +543,6 @@ void gfx_destroy()
 	vkDestroySurfaceKHR(vk.instance, vk.surface, NULL);
 	vmaDestroyAllocator(vk.vma);
 	vkDestroyDevice(vk.dev, NULL);
-	vkDestroyInstance(vk.instance, NULL);
+	vk_destroy_instance();
 }
 
