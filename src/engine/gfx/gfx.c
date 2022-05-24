@@ -483,7 +483,7 @@ void vk_create_allocator()
  * MAIN *
  ********/
 
-static void vk_resize_callback(void*arg)
+static void vk_resize_callback(Handle handle, void*arg)
 {
 	vk.framebuffer_resize = true;
 }
@@ -497,7 +497,7 @@ void gfx_init(void)
 		engine_crash("Vulkan is not supported");
 
 	vk.window = win_get();
-	event_bind(EVENT_WIN_RESIZE, vk_resize_callback);
+	event_bind(EVENT_WIN_RESIZE, vk_resize_callback, 0);
 
 	vk_instance_ext_get_avbl();
 	vk_validation_get_avbl();

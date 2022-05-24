@@ -2,31 +2,39 @@
 #include "common.h"
 
 #define MAX_BOUND_CALLBACKS 64
-static void (*callbacks[EVENT_COUNT][MAX_BOUND_CALLBACKS])(void*) = {{ 0 }};
 
-void event_bind(enum Event e, void(*callback)(void*))
+struct {
+	void (*func)(Handle, void*);
+	size_t data;
+} callbacks[EVENT_COUNT][MAX_BOUND_CALLBACKS];
+
+void event_bind(enum Event e, void(*callback)(Handle, void*), Handle data)
 {
 	for (int i = 0; i < MAX_BOUND_CALLBACKS; ++i) {
-		if( callbacks[e][i] == NULL ) {
-			callbacks[e][i] = callback;
+		if( callbacks[e][i].func == NULL ) {
+			callbacks[e][i].func = callback;
+			callbacks[e][i].data = data;
 			return;
 		}
 	}
 }
 
-void event_unbind(enum Event e, void(*callback)(void*))
+void event_unbind(enum Event e, void(*callback)(Handle, void*), Handle data)
 {
 	for (int i = 0; i < MAX_BOUND_CALLBACKS; ++i) {
-		if( callbacks[e][i] == callback )
-			callbacks[e][i] = NULL;
+		if (callbacks[e][i].func == callback 
+		 && callbacks[e][i].data == data)
+		{
+			callbacks[e][i].func = NULL;
+		}
 	}
 }
 
 void event_fire(enum Event e, void*args)
 {
 	for (int i = 0; i < MAX_BOUND_CALLBACKS; ++i) {
-		if( callbacks[e][i] != NULL ) 
-			callbacks[e][i](args);
+		if( callbacks[e][i].func != NULL ) 
+			callbacks[e][i].func(callbacks[e][i].data, args);
 	}
 }
 

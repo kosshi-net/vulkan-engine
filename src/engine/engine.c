@@ -1,4 +1,5 @@
 #include "engine/engine.h"
+#include "event/event.h"
 #include "log/log.h"
 #include "common.h"
 
@@ -60,9 +61,18 @@ void engine_init()
 
 void engine_destroy()
 {
+	engine_wait_idle();
+
+	log_info("Destroying renderers");
+	event_fire(EVENT_RENDERERS_DESTROY, NULL);
+
+	log_info("Destroying renderer core");
 	gfx_destroy();
+
+	log_info("Destroying window");
 	win_destroy();
 	glfwTerminate();
+
 	log_info("Goodbye!");
 }
 
@@ -97,6 +107,9 @@ void frame_end(struct Frame *frame)
 
 void engine_wait_idle(void)
 {
-	if(vk.dev) vkDeviceWaitIdle(vk.dev);
+	if(vk.dev) {
+		log_info("Wait idle");
+		vkDeviceWaitIdle(vk.dev);
+	}
 }
 

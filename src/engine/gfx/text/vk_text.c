@@ -359,6 +359,11 @@ void vk_text_destroy_fbdeps(struct VkTextContext *restrict this)
  * EXTERNAL *
  ************/
 
+void gfx_text_renderer_destroy_callback(TextRenderer id, void*p)
+{
+	gfx_text_renderer_destroy(id);
+}
+
 void gfx_text_renderer_destroy(TextRenderer id)
 {
 	struct VkTextContext *restrict this = &vktxtctx[id];
@@ -382,7 +387,7 @@ void gfx_text_renderer_destroy(TextRenderer id)
 	vk_text_destroy_fbdeps(this);
 }
 
-uint32_t gfx_text_renderer_create(
+TextRenderer gfx_text_renderer_create(
 	struct TextContext *txtctx, 
 	uint32_t max_glyphs
 ){
@@ -503,6 +508,9 @@ free_found:;
 			&this->frame[i].vertex_mapping
 		);
 	}
+
+
+	event_bind(EVENT_RENDERERS_DESTROY, gfx_text_renderer_destroy_callback, id);
 
 	return id;
 }

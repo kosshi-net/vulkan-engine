@@ -35,8 +35,8 @@ extern struct VkEngine vk;
 static struct SceneUBO scene_ubo;
 
 struct TestScene {
-	int object_num;
-	float *seeds;
+	uint32_t object_num;
+	float   *seeds;
 };
 
 static struct TestScene scene = {
@@ -104,13 +104,13 @@ void vk_load_teapot(void){
 	array_create(pot_vertex);
 	array_create(pot_index);
 
-	for (int i = 0; i < mesh->group_count; i++){
+	for (uint32_t i = 0; i < mesh->group_count; i++){
 		log_info("Group %i) %s", i, mesh->groups[i].name);
 
 		fastObjGroup *group = &mesh->groups[i];
 		int gidx = 0;
 
-		for (int fi = 0; fi < group->face_count; fi++) {
+		for (uint32_t fi = 0; fi < group->face_count; fi++) {
 			
 			uint32_t face_verts = mesh->face_vertices[ group->face_offset + fi ];
 
@@ -135,7 +135,7 @@ void vk_load_teapot(void){
 			}
 
 			
-			for (int ii = 0; ii < face_verts; ii++) {
+			for (uint32_t ii = 0; ii < face_verts; ii++) {
 				fastObjIndex mi = mesh->indices[group->index_offset + gidx];
 					
 				array_push(pot_vertex, mesh->positions[3 * mi.p + 0]);
@@ -300,8 +300,6 @@ void vk_create_pipeline()
 		.minDepthBounds        = 0.0f,
 		.maxDepthBounds        = 1.0f,
 		.stencilTestEnable     = VK_FALSE,
-		.front = {},
-		.back = {},
 	};
 
 	VkDescriptorSetLayout layouts[] = { 
@@ -500,9 +498,6 @@ void teapot_frame_create( struct TeapotFrameData *restrict frame )
 	};
 	ret = vkAllocateDescriptorSets(vk.dev, &dyndesc_ainfo, &frame->object_descriptor);
 	if(ret != VK_SUCCESS) engine_crash("vkAllocateDescriptorSets failed");
-
-failure:
-	return;
 }
 
 void teapot_frame_destroy(struct TeapotFrameData *restrict frame)
@@ -544,7 +539,7 @@ void vk_update_object_buffer(struct TeapotFrameData *frame)
 	);
 
 	/* Fill */
-	for (int i = 0; i < scene.object_num; i++) {
+	for (uint32_t i = 0; i < scene.object_num; i++) {
 		mat4 model; 
 		glm_mat4_identity(model);
 
@@ -634,7 +629,7 @@ void gfx_teapot_draw(struct Frame *restrict engine_frame)
 		&frame->scene_descriptor, 0, NULL
 	);
 	
-	for (int i = 0; i < scene.object_num; i++) {
+	for (uint32_t i = 0; i < scene.object_num; i++) {
 		uint32_t dynamic_offset = sizeof(struct ObjectUBO)*i;
 		vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, 
 			this->pipeline_layout,
@@ -782,5 +777,5 @@ void gfx_teapot_renderer_destroy(uint32_t handle)
 	vmaDestroyBuffer(vk.vma, this->vertex_buffer, this->vertex_alloc);
 
 	vmaDestroyBuffer(vk.vma, this->index_buffer, this->index_alloc);
-
 }
+

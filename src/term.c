@@ -16,7 +16,7 @@ struct TextStyle styles[] = {
 	[LOG_ERROR] = {.color = {0xFF, 0x00, 0x00, 0xFF}},
 };
 
-void log_callback(void*arg) 
+void log_callback(size_t handle, void*arg) 
 {
 	struct LogEvent *log = arg;
 	txtblk_set_text(txtblk[line], log->message, &styles[log->level]);
@@ -35,7 +35,7 @@ void term_create(void)
 		txtblk[i] = txtblk_create(txtctx, NULL);
 
 	log_info("Terminal created");
-	event_bind(EVENT_LOG, log_callback);
+	event_bind(EVENT_LOG, log_callback, 0);
 }
 
 void term_update(struct Frame *frame)

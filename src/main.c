@@ -113,10 +113,8 @@ int main(int argc, char**argv)
 
 #ifndef NDEBUG
 	gfx_util_write_ppm(txt.ctx->atlas.w, txt.ctx->atlas.h, txt.ctx->atlas.bitmap, "atlas.ppm");
+	log_debug("Exported atlas to atlas.ppm");
 #endif
-
-	log_warn("Test warning!");
-	log_error("Test error!");
 
 	while (!win_should_close()) {
 		
@@ -187,9 +185,7 @@ int main(int argc, char**argv)
 	}
 
 	engine_wait_idle();
-	term_destroy();
 	gfx_teapot_renderer_destroy(teagfx);
-	gfx_text_renderer_destroy(txt.gfx);
 
 	engine_destroy();
 

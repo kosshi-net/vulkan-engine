@@ -21,3 +21,5 @@
 typedef uint_fast32_t ufast32_t;
 typedef  int_fast32_t  fast32_t;
 
+typedef      uint32_t    Handle;
+
