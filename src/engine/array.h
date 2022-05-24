@@ -92,11 +92,11 @@ static inline void ARR_push(void*p, const void*data)
 	*(void**)p = arr->data;
 }
 
-#define array_pop(arr) ARR_pop(&arr)
-static inline void ARR_pop(void*p)
+#define array_pop(arr, num) ARR_pop(&arr, num)
+static inline void ARR_pop(void*p, size_t num)
 {
 	struct ARR_Head *arr = ARR_get_header(p);
-	arr->length--;
+	arr->length-=num;
 }
 
 #define array_length(arr) ARR_length(&arr)

@@ -15,7 +15,7 @@ extern struct VkEngine vk;
 
 bool vk_device_ext_check(const char*ext)
 {
-	for (int i = 0; i < array_length(vk.device_ext_avbl); i++ ) {
+	for (size_t i = 0; i < array_length(vk.device_ext_avbl); i++ ) {
 		const char *name = vk.device_ext_avbl[i].extensionName;
 		if (strcmp(ext, name)==0) goto found;
 	}
@@ -55,10 +55,10 @@ bool vk_device_ext_satisfied(VkPhysicalDevice dev)
 	vkEnumerateDeviceExtensionProperties(dev, NULL, &num, data);
 	
 	if(vk._verbose)
-		for(int i = 0; i < array_length(vk.device_ext_avbl); i++)
+		for(size_t i = 0; i < array_length(vk.device_ext_avbl); i++)
 			log_debug("%s", vk.device_ext_avbl[i].extensionName);
 
-	for ( int i = 0; i < array_length(vk.device_ext_req); i++ )
+	for (size_t i = 0; i < array_length(vk.device_ext_req); i++ )
 		if(!vk_device_ext_check(vk.device_ext_req[i]))
 			return false;
 
@@ -80,7 +80,7 @@ void vk_find_family_indices(VkPhysicalDevice device)
 	VkQueueFamilyProperties qfamily[family_num];
 	vkGetPhysicalDeviceQueueFamilyProperties(device, &family_num, qfamily);
 	
-	for (int i = 0; i < family_num; i++) {
+	for (size_t i = 0; i < family_num; i++) {
 		if (qfamily[i].queueFlags & VK_QUEUE_GRAPHICS_BIT) {
 			vk.family_graphics = i;
 			vk.family_graphics_valid = true;
@@ -106,12 +106,12 @@ void vk_select_gpu(void)
 	VkPhysicalDevice dev[dev_num];
 	vkEnumeratePhysicalDevices(vk.instance, &dev_num, dev);
 	
-	Array(int) valid_gpus;
+	Array(int32_t) valid_gpus;
 	array_create(valid_gpus);
 
 	log_info("Devices: %i", dev_num);
 
-	for (int i = 0; i < dev_num; i++){
+	for (uint32_t i = 0; i < dev_num; i++){
 
 		if(!vk_device_ext_satisfied(dev[i]))
 			continue;
@@ -173,7 +173,7 @@ VkDevice vk_create_device()
 	uint32_t families[] = {vk.family_graphics, vk.family_presentation};
 	uint32_t families_num = sizeof(families)/sizeof(uint32_t);
 	
-	for (int i = 0; i < families_num; i++) {
+	for (uint32_t i = 0; i < families_num; i++) {
 		array_push(qarray, (VkDeviceQueueCreateInfo){
 			.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
 			.queueFamilyIndex = families[i],

@@ -16,7 +16,7 @@ struct TextStyle styles[] = {
 	[LOG_ERROR] = {.color = {0xFF, 0x00, 0x00, 0xFF}},
 };
 
-void log_callback(size_t handle, void*arg) 
+void log_callback(Handle handle, void*arg) 
 {
 	struct LogEvent *log = arg;
 	txtblk_set_text(txtblk[line], log->message, &styles[log->level]);
@@ -47,6 +47,7 @@ void term_update(struct Frame *frame)
 		lines += txtblk[i]->lines;
 	}
 
+	txtctx_set_scissor(txtctx, 0, 0, frame->width, frame->height);
 	txtctx_set_root(txtctx, 0, frame->height - lines*txtctx->font_size-4); 
 
 	for (ufast32_t i = 0; i < LENGTH(txtblk); i++){

@@ -66,6 +66,7 @@ struct Atlas {
 };
 
 enum FontStyle {
+	FONT_STYLE_NORMAL = 0,
 	FONT_STYLE_BOLD   = (1<<0),
 	FONT_STYLE_ITALIC = (1<<1),
 };
@@ -100,6 +101,14 @@ struct TextContext {
 
 	int32_t cursor_x;
 	int32_t cursor_y;
+
+	bool scissor_enable;
+	struct {
+		int32_t x; 
+		int32_t y;
+		int32_t w;
+		int32_t h;
+	} scissor;
 
 	Array(struct TextBlok *) block_buffer;
 
@@ -168,7 +177,19 @@ void txtctx_clear(struct TextContext *ctx);
  */
 void txtctx_set_root(struct TextContext *ctx, uint32_t x, uint32_t y);
 
+/* 
+ * Insert a new line
+ */
 void txtctx_newline(struct TextContext *ctx);
+
+/*
+ * Set scissor. Used for culling.
+ */
+
+void txtctx_set_scissor(
+	struct TextContext *ctx,
+	int32_t x, int32_t y, int32_t w, int32_t h
+);
 
 /*********************
  * TextBlock Methods *

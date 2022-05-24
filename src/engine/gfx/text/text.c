@@ -749,9 +749,21 @@ void txtctx_clear(struct TextContext *restrict ctx)
 	ctx->glyph_count = 0;
 }
 
+
+void txtctx_set_scissor(
+	struct TextContext *restrict ctx,
+	int32_t x, int32_t y, int32_t w, int32_t h)
+{
+	ctx->scissor.x = x;
+	ctx->scissor.y = y;
+	ctx->scissor.w = w;
+	ctx->scissor.h = h;
+	ctx->scissor_enable = true;
+}
+
 void txtctx_add(struct TextBlock *block)
 {
-	static const uint32_t quad_vertex[4][3] = {
+	static const int32_t quad_vertex[4][3] = {
 		{0, 0, 0}, 
 		{0, 1, 0}, 
 		{1, 0, 0}, 
@@ -759,6 +771,9 @@ void txtctx_add(struct TextBlock *block)
 	};
 
 	struct TextContext *ctx = block->ctx;
+
+
+	struct TextVertex *vert = array_reserve(ctx->vertex_buffer, 4);
 
 	for (ufast32_t g = 0; g < array_length(block->quads); g++)
 	{
@@ -778,28 +793,37 @@ void txtctx_add(struct TextBlock *block)
 		if (quad->space) 
 			continue;
 
-		ctx->glyph_count++;
 		
 		int32_t w = quad->slot->w;
 		int32_t h = quad->slot->h;
+
+		uint32_t out_of_bounds =
+			(x   <  ctx->scissor.x) +
+			(y   <  ctx->scissor.y) +
+			(x+w >= ctx->scissor.w) +
+			(y+h >= ctx->scissor.h);
+
+		if (ctx->scissor_enable && out_of_bounds == 4) continue;
 
 		float uv_x = quad->slot->atlas_x / (float)ctx->atlas.w;
 		float uv_y = quad->slot->atlas_y / (float)ctx->atlas.h;
 		float uv_w = w / (float)ctx->atlas.w;
 		float uv_h = h / (float)ctx->atlas.h;
-
+		
 		for (int i = 0; i < 4; i++) {
-			struct TextVertex vert;
-			vert.pos[0] = (x + w * quad_vertex[i][0]);
-			vert.pos[1] = (y + h * quad_vertex[i][1]);
+			vert[i].pos[0] = (x + w * quad_vertex[i][0]);
+			vert[i].pos[1] = (y + h * quad_vertex[i][1]);
 
-			vert.uv[0] = (uv_x + uv_w * (float)quad_vertex[i][0]);
-			vert.uv[1] = (uv_y + uv_h * (float)quad_vertex[i][1]);
+			vert[i].uv[0] = (uv_x + uv_w * (float)quad_vertex[i][0]);
+			vert[i].uv[1] = (uv_y + uv_h * (float)quad_vertex[i][1]);
 
-			memcpy(vert.color, quad->color, sizeof(vert.color));
-			array_push(ctx->vertex_buffer, vert);
+			memcpy(vert[i].color, quad->color, sizeof(vert[i].color));
 		}
+
+		ctx->glyph_count++;
+		vert = array_reserve(ctx->vertex_buffer, 4);
 	}
+	array_pop(ctx->vertex_buffer, 4);
 }
 
 uint16_t *txt_create_shared_index_buffer(size_t max_glyphs, size_t *size)

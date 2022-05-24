@@ -132,7 +132,8 @@ int main(int argc, char**argv)
 		}
 
 		txtctx_clear(txt.ctx);
-		txtctx_set_root(txt.ctx, 10, 10);
+		txtctx_set_scissor(txt.ctx, 0, 0, frame->width, frame->height);
+		txtctx_set_root(txt.ctx, -10, -10);
 		char print[1024];
 		snprintf(print, sizeof(print), 
 			"FPS: %i/%i, sleeped %.2fms, busy %.2fms\n",
