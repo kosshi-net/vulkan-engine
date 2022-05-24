@@ -8,7 +8,6 @@
 #include "gfx/text/text.h"
 #include "event/event.h"
 
-#define TEXT_FRAME_MAX_GLYPHS (1024*4)
 #define TEXT_VERTICES_PER_GLYPH 4
 #define TEXT_INDICES_PER_GLYPH 6
 
@@ -383,8 +382,10 @@ void gfx_text_renderer_destroy(TextRenderer id)
 	vk_text_destroy_fbdeps(this);
 }
 
-uint32_t gfx_text_renderer_create(struct TextContext *txtctx)
-{
+uint32_t gfx_text_renderer_create(
+	struct TextContext *txtctx, 
+	uint32_t max_glyphs
+){
 	VkResult ret; 
 	uint32_t id;
 	for (id = 0; id < LENGTH(vktxtctx); id++) {
@@ -395,12 +396,12 @@ uint32_t gfx_text_renderer_create(struct TextContext *txtctx)
 free_found:;
 	struct VkTextContext *this = &vktxtctx[id];
 	this->ctx = txtctx;
-
+	this->max_glyphs = max_glyphs;
 	vk_text_texture(this);
 
 	size_t index_buf_size;
 	void  *index_buf = txt_create_shared_index_buffer(
-		TEXT_FRAME_MAX_GLYPHS, &index_buf_size
+		max_glyphs, &index_buf_size
 	);
 
 	vk_upload_buffer( 
@@ -415,7 +416,7 @@ free_found:;
 	 * Create frames *
 	 *****************/
 
-	size_t max_vertices = TEXT_FRAME_MAX_GLYPHS * 4;
+	size_t max_vertices = this->max_glyphs * 4;
 	size_t size = max_vertices * sizeof(float) * 6;
 
 	VkBufferCreateInfo buffer_info = {
@@ -528,22 +529,21 @@ void gfx_text_draw(struct Frame *frame, TextRenderer id)
 
 	size_t glyphs = this->ctx->glyph_count;
 
-	if (glyphs > TEXT_FRAME_MAX_GLYPHS) {
+	if (glyphs > this->max_glyphs) {
 		log_error("Max glyphs exceeded (%li > %li)", 
-			glyphs, TEXT_FRAME_MAX_GLYPHS
+			glyphs, this->max_glyphs
 		);
-		glyphs = TEXT_FRAME_MAX_GLYPHS;
+		glyphs = this->max_glyphs;
 	}
 
+	size_t bytes = glyphs * TEXT_VERTICES_PER_GLYPH * sizeof(struct TextVertex);
 	memcpy(
 		this->frame[f].vertex_mapping, 
 		this->ctx->vertex_buffer, 
-		glyphs * TEXT_VERTICES_PER_GLYPH * sizeof(struct TextVertex)
+		bytes
 	);
 
-	vmaFlushAllocation(vk.vma, this->frame[f].vertex_alloc, 0, 
-		array_sizeof(this->ctx->vertex_buffer)
-	);
+	vmaFlushAllocation(vk.vma, this->frame[f].vertex_alloc, 0, bytes);
 
 	if (this->ctx->atlas.dirty) {
 		log_debug("Uploading atlas!");
@@ -552,7 +552,7 @@ void gfx_text_draw(struct Frame *frame, TextRenderer id)
 
 	VkCommandBuffer cmd = frame->vk->cmd_buf;
 
-	vkCmdBindPipeline( cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline );
+	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
 
 	vkCmdBindVertexBuffers(cmd, 0, 1, &this->frame[f].vertex_buffer, (VkDeviceSize[]){0});
 	vkCmdBindIndexBuffer(cmd, this->index_buffer, 0, VK_INDEX_TYPE_UINT16);

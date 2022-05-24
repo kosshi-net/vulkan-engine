@@ -500,9 +500,17 @@ void gfx_init(void)
 	event_bind(EVENT_WIN_RESIZE, vk_resize_callback);
 
 	vk_instance_ext_get_avbl();
-	vk_instance_ext_add(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 	vk_validation_get_avbl();
-	vk_validation_add("VK_LAYER_KHRONOS_validation");
+
+#ifndef NDEBUG
+	vk.debug = true;
+#endif
+
+	if (vk.debug) {
+		vk_instance_ext_add(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
+		vk_validation_add("VK_LAYER_KHRONOS_validation");
+	}
+
 	vk_create_instance(); 
 
 	glfwCreateWindowSurface(vk.instance, vk.window, NULL, &vk.surface);

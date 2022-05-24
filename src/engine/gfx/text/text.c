@@ -18,6 +18,16 @@
 
 static FT_Library ft;
 
+void text_create_bin( 
+	struct TextContext *ctx, 
+	uint32_t bin_num, 
+	uint32_t slot_rows,
+	uint32_t slot_w,
+	uint32_t slot_h
+);
+
+
+
 Array(utf32_t) text_bidi( Array(utf32_t) input ) 
 {
 	FriBidiParType base = FRIBIDI_PAR_LTR;
@@ -115,45 +125,52 @@ Array(char) utf32_to_utf8( Array(utf32_t) utf32 )
 }
 
 
-void text_create_bin( 
+
+void txtctx_add_font(
 	struct TextContext *ctx, 
-	uint32_t bin_num, 
-	uint32_t slot_rows,
-	uint32_t slot_w,
-	uint32_t slot_h
-);
+	char *name, 
+	enum FontStyle style)
+{
+	log_debug("Loading font %s", name);
+
+	struct Font *f = array_reserve(ctx->fonts, 1);
+	f->style = style;
+
+	uint32_t ret = FT_New_Face(ft,
+		name,
+		0,
+		&f->ft_face
+	);
+	if(ret) engine_crash("FT_New_face failed");
+
+
+	if (f->ft_face->num_fixed_sizes) {
+		log_debug("%s fixed sizes:", name);
+		for (fast32_t j = 0; j < f->ft_face->num_fixed_sizes; j++)
+		{
+			log_debug("%ix%i", 
+				f->ft_face->available_sizes[j].width,
+				f->ft_face->available_sizes[j].height
+			);
+		}
+	}
+
+	ret = FT_Set_Pixel_Sizes(f->ft_face, 0, ctx->font_size);
+	if(ret) engine_crash("FT_Set_Pixel_Sizes failed");
+
+	f->hb_font = hb_ft_font_create_referenced(f->ft_face);
+	hb_ft_font_set_funcs(f->hb_font);
+
+	ctx->font_count++;
+}
 
 struct TextContext *txtctx_create(enum FontFamily family)
 {
-	Array(char*) fonts;
-	array_create(fonts);
-
-	switch (family) {
-	case FONT_SANS_16:
-		array_push(fonts, "fonts/NotoSans-Regular.ttf");
-		array_push(fonts, "fonts/NotoSansCJK-Medium.ttc");
-		array_push(fonts, "fonts/NotoSansArabic-Regular.ttf");
-		array_push(fonts, "fonts/NotoSansHebrew-Regular.ttf");
-		break;
-	case FONT_MONO_16:
-		array_push(fonts, "fonts/TerminusTTF.ttf");
-		array_push(fonts, "fonts/sazanami-gothic.ttf");
-		break;
-	default:
-		engine_crash("Undefined font family");
-	}
-
 	uint32_t ret; 
 	struct TextContext *restrict ctx = calloc(sizeof(struct TextContext), 1);
 
-	ctx->font_count = array_length(fonts);
 	ctx->font_size = 16;
-	ctx->fonts = calloc(ctx->font_count, sizeof(struct Font));
-
-	memset(ctx->style.color, 0xFF, LENGTH(ctx->style.color));
-
-	array_create(ctx->vertex_buffer);
-	array_create(ctx->block_buffer);
+	array_create(ctx->fonts);
 
 	if (!ft) {
 		ret = FT_Init_FreeType(&ft);
@@ -161,31 +178,31 @@ struct TextContext *txtctx_create(enum FontFamily family)
 			engine_crash("FT_Init_FreeType failed");
 	}
 
-	for (ufast32_t i = 0; i < ctx->font_count; i++) {
-		struct Font *f = &ctx->fonts[i];
-		ret = FT_New_Face(ft,
-			fonts[i],
-			0,
-			&f->ft_face
+	switch (family) {
+	case FONT_SANS_16:
+		txtctx_add_font(ctx, "fonts/NotoSans-Bold.ttf",   FONT_STYLE_BOLD);
+		txtctx_add_font(ctx, "fonts/NotoSans-Italic.ttf", FONT_STYLE_ITALIC);
+		txtctx_add_font(ctx, "fonts/NotoSans-BoldItalic.ttf",  
+			FONT_STYLE_BOLD | FONT_STYLE_ITALIC
 		);
 
-		log_info("%s sizes:", fonts[i]);
-		for (fast32_t j = 0; j < f->ft_face->num_fixed_sizes; j++)
-		{
-			log_info("%ix%i", 
-				f->ft_face->available_sizes[j].width,
-				f->ft_face->available_sizes[j].height
-			);
-		}
-
-		if(ret) engine_crash("FT_New_face failed");
-
-		ret = FT_Set_Pixel_Sizes(f->ft_face, 0, ctx->font_size);
-
-		if(ret) log_error("FT_Set_Pixel_Sizes failed");
-		f->hb_font = hb_ft_font_create_referenced(f->ft_face);
-		hb_ft_font_set_funcs(f->hb_font);
+		txtctx_add_font(ctx, "fonts/NotoSans-Regular.ttf", 0);
+		txtctx_add_font(ctx, "fonts/NotoSansCJK-Medium.ttc", 0);
+		txtctx_add_font(ctx, "fonts/NotoSansArabic-Regular.ttf", 0);
+		txtctx_add_font(ctx, "fonts/NotoSansHebrew-Regular.ttf", 0);
+		break;
+	case FONT_MONO_16:
+		txtctx_add_font(ctx, "fonts/TerminusTTF.ttf", 0);
+		txtctx_add_font(ctx, "fonts/sazanami-gothic.ttf", 0);
+		break;
+	default:
+		engine_crash("Undefined font family");
 	}
+
+	memset(ctx->style.color, 0xFF, LENGTH(ctx->style.color));
+
+	array_create(ctx->vertex_buffer);
+	array_create(ctx->block_buffer);
 
 	/* ATLAS */
 	
@@ -395,8 +412,10 @@ void push_text(
 		hb_glyph_position_t *glyph_pos;
 		uint32_t             glyph_count;
 		uint32_t             seek;
+		struct Font         *font;
+		uint32_t             ctx_index;
 	} fc [ctx->font_count];
-	
+	ufast32_t fnum = 0;
 	const uint32_t FONT_MISSING = UINT_MAX;
 
 	/* Try different fonts for each character (aka cluster) until all filled. 
@@ -409,12 +428,18 @@ void push_text(
 	for (ufast32_t i = 0; i < LENGTH(cluster_font); i++) 
 		cluster_font[i] = FONT_MISSING;
 
-	for (ufast32_t f = 0; f < ctx->font_count; f++) {
+	for (ufast32_t i = 0; i < ctx->font_count; i++) {
+		if (ctx->fonts[i].style != 0
+		 && ctx->fonts[i].style != style->style) 
+			continue;
+		ufast32_t f = fnum++;
+		fc[f].font = &ctx->fonts[i];
+		fc[f].ctx_index = i;
 		fc[f].buf = hb_buffer_create();
 		hb_buffer_set_direction (fc[f].buf, HB_DIRECTION_LTR);
 		hb_buffer_set_script    (fc[f].buf, HB_SCRIPT_COMMON);
 		hb_buffer_add_codepoints(fc[f].buf, utf32, -1, start, length);
-		hb_shape(ctx->fonts[f].hb_font,  fc[f].buf, NULL, 0);
+		hb_shape(fc[f].font->hb_font,  fc[f].buf, NULL, 0);
 
 		fc[f].glyph_info = hb_buffer_get_glyph_infos(
 			fc[f].buf, &fc[f].glyph_count
@@ -448,10 +473,14 @@ void push_text(
 	hb_position_t cursor_y = 0;
 
 	for (uint32_t cluster = start; cluster < start+length; ) {
-		int32_t f = cluster_font[cluster];
+		uint32_t f = cluster_font[cluster];
 
 		/* Use unicode replacement character of the primary font */
-		if (f == -1) f = 0;
+		if (f == FONT_MISSING) {
+			if (utf32[cluster] != '\n')
+				log_warn("Missing font, %i", utf32[cluster]);
+			f = 0;
+		}
 
 		/* Find glyph generated for cluster (if any), store in g */
 		uint32_t g = fc[f].seek; 
@@ -465,16 +494,18 @@ void push_text(
 		/* Push glyphs until cluster changes */
 		bool space   = (utf32[cluster] == ' ');
 		bool newline = (utf32[cluster] == '\n');
+		if (newline) block->lines++;
 
 		for (; 
 			fc[f].glyph_info[g].cluster == cluster && g < fc[f].glyph_count; 
 			g++
 		){
 			hb_codepoint_t glyphid  = fc[f].glyph_info[g].codepoint;
-
-			struct GlyphSlot *slot = text_find_glyph(ctx, f, glyphid);
+			
+			uint32_t i = fc[f].ctx_index;
+			struct GlyphSlot *slot = text_find_glyph(ctx, i, glyphid);
 			if (!slot)
-				slot = text_cache_glyph(ctx, f, glyphid);
+				slot = text_cache_glyph(ctx, i, glyphid);
 
 			hb_position_t  x_offset  = fc[f].glyph_pos[g].x_offset;
 			hb_position_t  y_offset  = fc[f].glyph_pos[g].y_offset;
@@ -558,32 +589,14 @@ void txtblk_set_text(
 ){
 	txtblk_unreference_slots(block);
 	array_clear(block->quads);
+	block->lines = 1;
 	txtblk_add_text(block, utf8, style);
 	txtblk_align(block, block->align, block->max_width);
 }
 
 void txtblk_edit(struct TextBlock *restrict block, const char *restrict utf8)
 {
-	txtblk_unreference_slots(block);
-
-	Array(utf32_t) temp = utf8_to_utf32(utf8);
-	Array(utf32_t) utf32 = text_bidi(temp);
-
-	array_clear(block->quads);
-	push_text(
-		block->ctx,
-		block,
-		&block->ctx->style,
-		utf32, 
-		0, array_length(utf32)-1
-	);
-
-	array_destroy(utf32);
-	array_destroy(temp);
-
-	block->aligned = false;
-	
-	txtblk_align(block, block->align, block->max_width);
+	txtblk_set_text(block, utf8, NULL);
 }
 
 void*txtblk_destroy(struct TextBlock *block)
@@ -606,6 +619,7 @@ void txtblk_align(
 
 	txtblk_unalign(block);
 	block->aligned = true;
+	block->lines = 1;
 
 	if (block->max_width != 0) {
 		struct GlyphQuad *last = NULL;
@@ -618,16 +632,25 @@ void txtblk_align(
 			if (quad->newline) {
 				cursor_x = 0;
 				cursor_word = 0;
+				block->lines++;
 				continue;
 			}
 
 			cursor_word += quad->advance_x;
 
-			if (cursor_x+cursor_word >= block->max_width && last) {
+			if (cursor_x+cursor_word >= block->max_width) {
+				
+				if (last == NULL) {
+					/* Word is longer than max_width */
+					last = quad;
+				}
+
 				last->newline = true;
 				last->alignment_newline = true;
+				block->lines++;
 				cursor_x = cursor_word;
 				cursor_word = 0;
+				last = NULL;
 				continue;
 			}
 

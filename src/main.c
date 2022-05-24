@@ -41,15 +41,28 @@ int main(int argc, char**argv)
 	txt.cam   = txtblk_create(txt.ctx, NULL);
 	txt.tea   = txtblk_create(txt.ctx, NULL);
 
-	txtblk_add_text(txt.tea, "Teapot ",       (struct TextStyle[]){{.color={255,255,255,255}}});
-	txtblk_add_text(txt.tea, "ティーポット ", (struct TextStyle[]){{.color={128,255,255,255}}});
-	txtblk_add_text(txt.tea, "чайник ",       (struct TextStyle[]){{.color={255,128,255,255}}});
-	txtblk_add_text(txt.tea, "ابريق الشاي ",  (struct TextStyle[]){{.color={255,255,128,255}}});
-	txtblk_add_text(txt.tea, "茶壶 ",         (struct TextStyle[]){{.color={128,128,255,255}}});
-	txtblk_add_text(txt.tea, "קוּמקוּם  ",      (struct TextStyle[]){{.color={255,128,128,255}}});
-	txtblk_add_text(txt.tea, "τσαγιέρα ",     (struct TextStyle[]){{.color={128,255,128,255}}});
-		//"Teapot ティーポット чайник ابريق الشاي 茶壶 קוּמקוּם τσαγιέρα\n"
-	txtblk_add_text(txt.tea, "\n",  NULL);
+	struct TextStyle s;
+	txtblk_add_text(txt.tea, "Teapot ",       textstyle_set(&s, 0xFFFFFFFF, 0));
+	txtblk_add_text(txt.tea, "ティーポット ", textstyle_set(&s, 0x88FFFFFF, 0));
+	txtblk_add_text(txt.tea, "чайник ",       textstyle_set(&s, 0xFF88FFFF, 0));
+	txtblk_add_text(txt.tea, "ابريق الشاي ",  textstyle_set(&s, 0xFFFF88FF, 0));
+	txtblk_add_text(txt.tea, "茶壶 ",         textstyle_set(&s, 0x8888FFFF, 0));
+	txtblk_add_text(txt.tea, "קוּמקוּם  ",      textstyle_set(&s, 0xFF8888FF, 0));
+	txtblk_add_text(txt.tea, "τσαγιέρα ",     textstyle_set(&s, 0xFF8888FF, 0));
+	txtblk_add_text(txt.tea, "\n\n", NULL);
+
+	txtblk_add_text(txt.tea, 
+		"Italic text. ティーポット <- if no italic font present, fall back to normal \n", 
+		textstyle_set(&s, 0xFFFFFFFF, FONT_STYLE_ITALIC )
+	);
+	txtblk_add_text(txt.tea, 
+		"This is green bold text. ", 
+		textstyle_set(&s, 0x44FF44FF, FONT_STYLE_BOLD)
+	);
+	txtblk_add_text(txt.tea, 
+		"This is both italic and bold.\n", 
+		textstyle_set(&s, 0xFF4444FF, FONT_STYLE_BOLD | FONT_STYLE_ITALIC)
+	);
 	
 	txtctx_add(txt.hello);
 
@@ -83,7 +96,7 @@ int main(int argc, char**argv)
 	txtblk_align(txt.ctl_right, TEXT_ALIGN_RIGHT,  txt.ctl_width);
 	txtblk_align(txt.ctl_left,  TEXT_ALIGN_LEFT,   txt.ctl_width);
 
-	txt.gfx = gfx_text_renderer_create(txt.ctx);
+	txt.gfx = gfx_text_renderer_create(txt.ctx, 512);
 
 	uint32_t teagfx= gfx_teapot_renderer_create();
 
@@ -98,7 +111,9 @@ int main(int argc, char**argv)
 		.fov = 90.0,
 	};
 
+#ifndef NDEBUG
 	gfx_util_write_ppm(txt.ctx->atlas.w, txt.ctx->atlas.h, txt.ctx->atlas.bitmap, "atlas.ppm");
+#endif
 
 	log_warn("Test warning!");
 	log_error("Test error!");
@@ -119,6 +134,7 @@ int main(int argc, char**argv)
 		}
 
 		txtctx_clear(txt.ctx);
+		txtctx_set_root(txt.ctx, 10, 10);
 		char print[1024];
 		snprintf(print, sizeof(print), 
 			"FPS: %i/%i, sleeped %.2fms, busy %.2fms\n",

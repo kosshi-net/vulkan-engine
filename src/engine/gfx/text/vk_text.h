@@ -23,6 +23,8 @@ struct VkTextContext {
 
 	struct TextContext            *ctx;
 
+	uint32_t                       max_glyphs;
+
 	VkPipelineLayout               pipeline_layout;
 	VkPipeline                     pipeline;
 	VkDescriptorSetLayout          descriptor_layout;
@@ -37,7 +39,7 @@ struct VkTextContext {
 
 typedef uint32_t TextRenderer;
 
-TextRenderer gfx_text_renderer_create (struct TextContext *);
+TextRenderer gfx_text_renderer_create (struct TextContext *, uint32_t glyphs);
 void         gfx_text_renderer_destroy(uint32_t);
 void         gfx_text_draw            (struct Frame*, uint32_t);
 

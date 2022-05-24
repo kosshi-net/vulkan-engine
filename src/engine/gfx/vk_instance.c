@@ -90,15 +90,58 @@ void vk_validation_add(const char *ext)
 	array_push(vk.validation_req, ext);
 }
 
+
 static VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(
 	VkDebugUtilsMessageSeverityFlagBitsEXT      messageSeverity,
 	VkDebugUtilsMessageTypeFlagsEXT             messageType,
 	const VkDebugUtilsMessengerCallbackDataEXT* pCallbackData,
 	void* pUserData
 ){
-	
-	log_error("%s", pCallbackData->pMessage);
-	//std::cerr << "validation layer: " << pCallbackData->pMessage << std::endl;
+	static struct {
+		int32_t  message_id;
+		uint32_t pass;
+		char    *warn;
+	} filter[] = {
+		{
+			.message_id = 0x7cd0911d,
+			.warn       = "This is a known Vulkan issue. Message will be filtered.",
+			.pass       = 1,
+		}
+	};
+
+	ufast32_t f = 0;
+	for (f = 0; f < LENGTH(filter); f++) {
+		if (filter[f].message_id == pCallbackData->messageIdNumber) {
+			if (filter[f].pass == 0) {
+				return VK_FALSE;
+			} else {
+				filter[f].pass--;
+				break;
+			}
+		}
+	}
+
+	switch (messageSeverity) {
+	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT:
+		log_debug("%s", pCallbackData->pMessage);
+		break;
+	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT:
+		log_info("%s", pCallbackData->pMessage);
+		break;
+	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT:
+		log_warn("%s", pCallbackData->pMessage);
+		break;
+	default:
+	case VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT:
+		log_error("%s", pCallbackData->pMessage);
+		break;
+	}
+
+	if (filter[f].message_id == pCallbackData->messageIdNumber
+	 && filter[f].pass == 0)
+	{
+		log_warn(filter[f].warn);
+	}
 
     return VK_FALSE;
 }
@@ -132,6 +175,7 @@ void vk_create_messenger()
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | 
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
+			VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |
 			0,
 		.messageType = 
 			VK_DEBUG_UTILS_MESSAGE_TYPE_GENERAL_BIT_EXT | 
@@ -157,9 +201,10 @@ void vk_create_messenger()
 /************
  * INSTANCE *
  ************/
+
 void vk_destroy_instance(void) 
 {
-	vk_destroy_messenger();
+	if (vk.debug) vk_destroy_messenger();
 	vkDestroyInstance(vk.instance, NULL);
 }
 
@@ -203,6 +248,6 @@ void vk_create_instance(void)
 	
 	if (ret != VK_SUCCESS) engine_crash("vkCreateInstance failed");
 
-	vk_create_messenger();
+	if (vk.debug) vk_create_messenger();
 }
 

@@ -20,7 +20,7 @@ void log_callback(void*arg)
 {
 	struct LogEvent *log = arg;
 	txtblk_set_text(txtblk[line], log->message, &styles[log->level]);
-
+	txtblk_align(txtblk[line], TEXT_ALIGN_LEFT, 800);
 	line++;
 	line %= LENGTH(txtblk);
 }
@@ -29,7 +29,7 @@ void term_create(void)
 {
 	txtctx = txtctx_create(FONT_MONO_16);
 	txtctx->mute_logging = true; /* Mute by default, creates loops otherwise */
-	gfx    = gfx_text_renderer_create(txtctx);
+	gfx    = gfx_text_renderer_create(txtctx, 1024*16);
 
 	for (ufast32_t i = 0; i < LENGTH(txtblk); i++)
 		txtblk[i] = txtblk_create(txtctx, NULL);
@@ -41,7 +41,13 @@ void term_create(void)
 void term_update(struct Frame *frame)
 {
 	txtctx_clear(txtctx);
-	txtctx_set_root(txtctx, 0, frame->height - LENGTH(txtblk)*txtctx->font_size-4); 
+
+	ufast32_t lines = 0;
+	for (ufast32_t i = 0; i < LENGTH(txtblk); i++) {
+		lines += txtblk[i]->lines;
+	}
+
+	txtctx_set_root(txtctx, 0, frame->height - lines*txtctx->font_size-4); 
 
 	for (ufast32_t i = 0; i < LENGTH(txtblk); i++){
 		txtctx_add( txtblk[(i+line)%LENGTH(txtblk)] );

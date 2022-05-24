@@ -28,13 +28,13 @@ struct VkEngine {
 	GLFWwindow                    *window;
 
 	bool _verbose;
-
 	double                         last_resize;
 
 	/* 
 	 * Core resources
 	 */
 
+	bool                           debug;
 	VkDebugUtilsMessengerEXT       messenger;
 
 	VmaAllocator                   vma;

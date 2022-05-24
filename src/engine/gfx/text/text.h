@@ -65,22 +65,33 @@ struct Atlas {
 	} *bin;
 };
 
-struct TextStyle {
-	uint8_t color[4];
+enum FontStyle {
+	FONT_STYLE_BOLD   = (1<<0),
+	FONT_STYLE_ITALIC = (1<<1),
 };
+
+struct TextStyle {
+	uint8_t            color[4];
+	enum FontStyle     style;
+};
+
+struct Font {
+	FT_Face            ft_face;
+	hb_font_t         *hb_font;
+	enum FontStyle     style;
+};
+
+
 
 struct TextContext {
 	struct Atlas atlas;
 
-	size_t       font_count;
 	bool         mute_logging;
 
 	struct TextStyle style;
 
-	struct Font {
-		FT_Face    ft_face;
-		hb_font_t *hb_font;
-	} *fonts;
+	Array(struct Font) fonts;
+	size_t font_count;
 
 	int32_t font_size;
 	
@@ -118,7 +129,6 @@ struct GlyphQuad {
 struct TextBlock {
 	struct TextContext *ctx;
 
-
 	enum TextAlign {
 		TEXT_ALIGN_LEFT,
 		TEXT_ALIGN_RIGHT,
@@ -129,6 +139,7 @@ struct TextBlock {
 	bool aligned;
 
 	uint32_t max_width;
+	uint32_t lines;
 
 	Array(struct GlyphQuad) quads;
 };
@@ -199,6 +210,21 @@ void  txtblk_unalign( struct TextBlock *);
 
 void *txtblk_destroy(struct TextBlock *);
 
+/* Convenience function */
+static inline 
+struct TextStyle *
+textstyle_set(
+	struct TextStyle *style, 
+	uint32_t          color_hex,
+	enum FontStyle    font_style)
+{
+	style->color[0] = color_hex >> 24;
+	style->color[1] = color_hex >> 16;
+	style->color[2] = color_hex >> 8;
+	style->color[3] = color_hex >> 0;
+	style->style    = font_style;
+	return style;
+}
 
 /*****************
  * Other Methods *
