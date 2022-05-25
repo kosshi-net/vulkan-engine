@@ -104,7 +104,7 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(
 	} filter[] = {
 		{
 			.message_id = 0x7cd0911d,
-			.warn       = "This is a known Vulkan issue. Message will be filtered.",
+			.warn       = "This is a known issue of the Vulkan spec. Muted.",
 			.pass       = 1,
 		}
 	};
@@ -172,7 +172,7 @@ void vk_create_messenger()
 	VkDebugUtilsMessengerCreateInfoEXT debug_info = {
 		.sType = VK_STRUCTURE_TYPE_DEBUG_UTILS_MESSENGER_CREATE_INFO_EXT,
 		.messageSeverity =
-			VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
+			//VK_DEBUG_UTILS_MESSAGE_SEVERITY_VERBOSE_BIT_EXT | 
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_WARNING_BIT_EXT | 
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_ERROR_BIT_EXT |
 			VK_DEBUG_UTILS_MESSAGE_SEVERITY_INFO_BIT_EXT |

@@ -22,8 +22,12 @@ add_executable( engine
 	engine/gfx/vk_instance.c
 	engine/gfx/vk_device.c
 	engine/gfx/vk_swapchain.c
-	engine/gfx/text/vk_text.c
-	engine/gfx/text/text.c
+
+	engine/text/text_engine.c
+	engine/text/text_block.c
+	engine/text/text_renderer.c
+	engine/text/text_geometry.c
+
 	engine/gfx/vma.cpp
 )
 

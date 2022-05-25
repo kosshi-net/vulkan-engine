@@ -1,19 +1,38 @@
-#include "gfx/text/vk_text.h"
+#include "text/text_renderer.h"
+#include "text/text_geometry.h"
+#include "text/text_engine.h"
 
-#include "common.h"
 #include "gfx/gfx.h"
 #include "gfx/gfx_types.h"
 #include "gfx/vk_util.h"
+
+#include "common.h"
 #include "res.h"
-#include "gfx/text/text.h"
 #include "event/event.h"
 
-#define TEXT_VERTICES_PER_GLYPH 4
-#define TEXT_INDICES_PER_GLYPH 6
 
 extern struct VkEngine vk;
 
-static struct VkTextContext vktxtctx[4];
+static struct TextRenderer text_renderers[1];
+struct TextRenderer *text_renderer_get_struct(TextEngine handle)
+{
+	if (handle == 0) engine_crash("NULL handle");
+	struct TextRenderer *this = &text_renderers[handle-1];
+	if (!this->valid) 
+		engine_crash("Invalid handle");
+	return this;
+}
+TextRenderer text_renderer_alloc(void)
+{
+	for (ufast32_t i = 0; i < LENGTH(text_renderers); i++) {
+		if (!text_renderers[i].valid) {
+			text_renderers[i].valid = true;
+			return i+1;
+		}
+	}
+	engine_crash("Out of slots");
+	return 0; 
+}
 
 
 static VkVertexInputBindingDescription text_binding = {
@@ -43,7 +62,7 @@ static VkVertexInputAttributeDescription text_attributes[] = {
 	},
 };
 
-void vk_text_create_pipeline(struct VkTextContext *restrict this)
+void vk_text_create_pipeline(struct TextRenderer *restrict this)
 {
 	VkShaderModule vert_shader = vk_create_shader_module(RES_SHADER_VERT_TEXT);
 	VkShaderModule frag_shader = vk_create_shader_module(RES_SHADER_FRAG_TEXT);
@@ -221,7 +240,7 @@ void vk_text_create_pipeline(struct VkTextContext *restrict this)
     vkDestroyShaderModule(vk.dev, vert_shader, NULL);	
 }
 
-void vk_text_create_descriptor_layout(struct VkTextContext *restrict this)
+void vk_text_create_descriptor_layout(struct TextRenderer *restrict this)
 {
 	VkDescriptorSetLayoutBinding ubo_binding = {
 		.binding = 0, 
@@ -257,11 +276,13 @@ void vk_text_create_descriptor_layout(struct VkTextContext *restrict this)
 	if (ret != VK_SUCCESS) engine_crash("vkCreateDescriptorSetLayout");
 }
 
-void vk_text_update_texture(struct VkTextContext *restrict this)
+void vk_text_update_texture(struct TextRenderer *restrict this)
 {
-	int32_t  texw   = this->ctx->atlas.w;
-	int32_t  texh   = this->ctx->atlas.h;
-	uint8_t *pixels = this->ctx->atlas.bitmap;
+	struct TextEngine *restrict engine = text_engine_get_struct(this->engine);
+
+	int32_t  texw   = engine->atlas.w;
+	int32_t  texh   = engine->atlas.h;
+	uint8_t *pixels = engine->atlas.bitmap;
 	VkDeviceSize   image_size = texw * texh * 1;
 
 	vk_create_buffer_vma(
@@ -293,13 +314,15 @@ void vk_text_update_texture(struct VkTextContext *restrict this)
 
 	vmaDestroyBuffer(vk.vma, vk.staging_buffer, vk.staging_alloc);
 
-	this->ctx->atlas.dirty = false;
+	engine->atlas.dirty = false;
 }
 
-void vk_text_texture(struct VkTextContext *restrict this)
+void vk_text_texture(struct TextRenderer *restrict this)
 {
-	int32_t  texw   = this->ctx->atlas.w;
-	int32_t  texh   = this->ctx->atlas.h;
+	struct TextEngine *restrict engine = text_engine_get_struct(this->engine);
+
+	int32_t texw = engine->atlas.w;
+	int32_t texh = engine->atlas.h;
 
 	vk_create_image_vma(
 		texw, texh,
@@ -342,13 +365,13 @@ void vk_text_texture(struct VkTextContext *restrict this)
 
 
 
-void vk_text_create_fbdeps(struct VkTextContext *restrict this)
+void vk_text_create_fbdeps(struct TextRenderer *restrict this)
 {
 	vk_text_create_descriptor_layout(this);
 	vk_text_create_pipeline(this);
 }
 
-void vk_text_destroy_fbdeps(struct VkTextContext *restrict this)
+void vk_text_destroy_fbdeps(struct TextRenderer *restrict this)
 {
 	vkDestroyPipeline(      vk.dev, this->pipeline, NULL);
 	vkDestroyPipelineLayout(vk.dev, this->pipeline_layout, NULL);
@@ -359,54 +382,54 @@ void vk_text_destroy_fbdeps(struct VkTextContext *restrict this)
  * EXTERNAL *
  ************/
 
-void gfx_text_renderer_destroy_callback(TextRenderer id, void*p)
+void text_renderer_destroy_callback(TextRenderer id, void*p)
 {
-	gfx_text_renderer_destroy(id);
+	text_renderer_destroy(id);
 }
 
-void gfx_text_renderer_destroy(TextRenderer id)
+TextRenderer text_renderer_destroy(TextRenderer handle)
 {
-	struct VkTextContext *restrict this = &vktxtctx[id];
-
-	for (int i = 0; i < VK_FRAMES; i++) {
-		vmaUnmapMemory(vk.vma, this->frame[i].vertex_alloc);
-		vmaDestroyBuffer(vk.vma, 
-			this->frame[i].vertex_buffer, 
-			this->frame[i].vertex_alloc
-		);
-
-		vmaDestroyBuffer(vk.vma, 
-			this->frame[i].uniform_buffer, this->frame[i].uniform_alloc
-		);
-	}
+	struct TextRenderer *restrict this = text_renderer_get_struct(handle);
 
 	vkDestroyImageView(vk.dev, this->texture_view, NULL);
 	vmaDestroyImage   (vk.vma, this->texture_image, this->texture_alloc);
 	vmaDestroyBuffer  (vk.vma, this->index_buffer,  this->index_alloc);
 
 	vk_text_destroy_fbdeps(this);
+
+	return 0;
 }
 
-TextRenderer gfx_text_renderer_create(
-	struct TextContext *txtctx, 
-	uint32_t max_glyphs
-){
-	VkResult ret; 
-	uint32_t id;
-	for (id = 0; id < LENGTH(vktxtctx); id++) {
-		if (vktxtctx[id].ctx == NULL) 
-			goto free_found;
+uint16_t *create_index_buffer(size_t max_glyphs, size_t *size)
+{
+	static const uint16_t quad_index[] = { 
+		0, 1, 2,
+		1, 2, 3
+	};
+
+	*size = max_glyphs * sizeof(quad_index);
+	uint16_t *buffer = malloc(*size);
+
+	for (ufast32_t i = 0; i < max_glyphs; i++) {
+		fast32_t offset = LENGTH(quad_index) * i;
+		for (ufast32_t j = 0; j < LENGTH(quad_index); j++)
+			buffer[offset+j] = 4*i + quad_index[j];
 	}
-	engine_crash("Too many text renderers");
-free_found:;
-	struct VkTextContext *this = &vktxtctx[id];
-	this->ctx = txtctx;
-	this->max_glyphs = max_glyphs;
+
+	return buffer;
+}
+
+TextRenderer text_renderer_create(TextEngine engine_handle)
+{
+	TextRenderer                  handle = text_renderer_alloc();
+	struct TextRenderer *restrict this   = text_renderer_get_struct(handle);
+	this->engine = engine_handle;
+
 	vk_text_texture(this);
 
 	size_t index_buf_size;
-	void  *index_buf = txt_create_shared_index_buffer(
-		max_glyphs, &index_buf_size
+	void  *index_buf = create_index_buffer(
+		32*1024, &index_buf_size
 	);
 
 	vk_upload_buffer( 
@@ -417,109 +440,21 @@ free_found:;
 
 	vk_text_create_fbdeps(this);
 
-	/*****************
-	 * Create frames *
-	 *****************/
+	event_bind(EVENT_RENDERERS_DESTROY, text_renderer_destroy_callback, handle);
 
-	size_t max_vertices = this->max_glyphs * 4;
-	size_t size = max_vertices * sizeof(float) * 6;
-
-	VkBufferCreateInfo buffer_info = {
-		.sType = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO,
-		.size = size,
-		.usage = 
-			VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
-		.sharingMode = VK_SHARING_MODE_EXCLUSIVE,
-	};
-
-	VmaAllocationCreateInfo alloc_info = {
-		.usage = VMA_MEMORY_USAGE_AUTO,
-		.flags = VMA_ALLOCATION_CREATE_HOST_ACCESS_SEQUENTIAL_WRITE_BIT |
-		         VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
-	};
-
-	for (ufast32_t i = 0; i < VK_FRAMES; i++) {
-		vk_create_buffer_vma(
-			sizeof(struct TextUBO),
-			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-			VMA_MEMORY_USAGE_CPU_TO_GPU,
-			&this->frame[i].uniform_buffer,
-			&this->frame[i].uniform_alloc
-		);
-
-		VkDescriptorSetAllocateInfo desc_ainfo = {
-			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
-			.descriptorPool     = vk.descriptor_pool,
-			.descriptorSetCount = 1,
-			.pSetLayouts        = &this->descriptor_layout
-		};
-		ret = vkAllocateDescriptorSets(vk.dev, 
-			&desc_ainfo, &this->frame[i].descriptor_set
-		);
-		if(ret != VK_SUCCESS) engine_crash("vkAllocateDescriptorSets failed");
-
-		VkDescriptorBufferInfo uniform_buffer_info = {
-			.buffer = this->frame[i].uniform_buffer,
-			.offset = 0,
-			.range  = sizeof(struct TextUBO)
-		};
-		VkDescriptorImageInfo uniform_image_info = {
-			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
-			.imageView   = this->texture_view,
-			.sampler     = vk.texture_sampler,
-		};
-		VkWriteDescriptorSet desc_write[] = {
-			{
-				.sType              = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet             = this->frame[i].descriptor_set,
-				.dstBinding         = 0,
-				.dstArrayElement    = 0,
-				.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				.descriptorCount    = 1,
-				.pBufferInfo        = &uniform_buffer_info,
-				.pImageInfo         = NULL,
-				.pTexelBufferView   = NULL,
-			},
-			{
-				.sType              = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet             = this->frame[i].descriptor_set,
-				.dstBinding         = 1,
-				.dstArrayElement    = 0,
-				.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-				.descriptorCount    = 1,
-				.pBufferInfo        = NULL,
-				.pImageInfo         = &uniform_image_info,
-				.pTexelBufferView   = NULL,
-			},
-		};
-		vkUpdateDescriptorSets(vk.dev, LENGTH(desc_write), desc_write, 0, NULL);
-
-		ret = vmaCreateBuffer(vk.vma, 
-			&buffer_info, &alloc_info, 
-			&this->frame[i].vertex_buffer, 
-			&this->frame[i].vertex_alloc, 
-			NULL
-		);
-
-		if(ret != VK_SUCCESS) engine_crash("vmaCreateBuffer failed");
-
-		vmaMapMemory(vk.vma, 
-			this->frame[i].vertex_alloc, 
-			&this->frame[i].vertex_mapping
-		);
-	}
-
-
-	event_bind(EVENT_RENDERERS_DESTROY, gfx_text_renderer_destroy_callback, id);
-
-	return id;
+	return handle;
 }
 
-
-void gfx_text_draw(struct Frame *frame, TextRenderer id)
+void text_renderer_draw(
+	TextRenderer handle,
+	TextGeometry geom_handle,
+	struct Frame *frame)
 {
-	struct VkTextContext *restrict this = &vktxtctx[id];
-	uint32_t f = frame->vk->id;
+	struct TextRenderer *restrict this   = text_renderer_get_struct(handle);
+	struct TextGeometry *restrict geom   = text_geometry_get_struct(geom_handle);
+	struct TextEngine   *restrict engine = text_engine_get_struct(this->engine);
+
+	uint32_t f = (geom->type == TEXT_GEOMETRY_STATIC) ? 0 : frame->vk->id;
 
 	struct TextUBO ubo;
 
@@ -531,29 +466,15 @@ void gfx_text_draw(struct Frame *frame, TextRenderer id)
 	);
 
 	void *data;
-	vmaMapMemory(vk.vma, this->frame[f].uniform_alloc, &data);
+	vmaMapMemory(vk.vma, geom->frame[f].uniform_alloc, &data);
 	memcpy(data, &ubo, sizeof(ubo));
-	vmaUnmapMemory(vk.vma, this->frame[f].uniform_alloc);
+	vmaUnmapMemory(vk.vma, geom->frame[f].uniform_alloc);
 
-	size_t glyphs = this->ctx->glyph_count;
-
-	if (glyphs > this->max_glyphs) {
-		log_error("Max glyphs exceeded (%li > %li)", 
-			glyphs, this->max_glyphs
-		);
-		glyphs = this->max_glyphs;
+	if (geom->type == TEXT_GEOMETRY_DYNAMIC) {
+		text_geometry_upload(geom_handle, frame);
 	}
 
-	size_t bytes = glyphs * TEXT_VERTICES_PER_GLYPH * sizeof(struct TextVertex);
-	memcpy(
-		this->frame[f].vertex_mapping, 
-		this->ctx->vertex_buffer, 
-		bytes
-	);
-
-	vmaFlushAllocation(vk.vma, this->frame[f].vertex_alloc, 0, bytes);
-
-	if (this->ctx->atlas.dirty) {
+	if (engine->atlas.dirty) {
 		log_debug("Uploading atlas!");
 		vk_text_update_texture(this);
 	}
@@ -562,16 +483,16 @@ void gfx_text_draw(struct Frame *frame, TextRenderer id)
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
 
-	vkCmdBindVertexBuffers(cmd, 0, 1, &this->frame[f].vertex_buffer, (VkDeviceSize[]){0});
+	vkCmdBindVertexBuffers(cmd, 0, 1, &geom->frame[f].vertex_buffer, (VkDeviceSize[]){0});
 	vkCmdBindIndexBuffer(cmd, this->index_buffer, 0, VK_INDEX_TYPE_UINT16);
 
 	vkCmdBindDescriptorSets(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, 
 		this->pipeline_layout,
 		0, 1,
-		&this->frame[f].descriptor_set, 0, NULL
+		&geom->frame[f].descriptor_set, 0, NULL
 	);
+
+	uint32_t glyphs = MIN(geom->glyph_count, geom->glyph_max);
 
 	vkCmdDrawIndexed(cmd, glyphs * TEXT_INDICES_PER_GLYPH, 1,0,0,0);
 }
-
-

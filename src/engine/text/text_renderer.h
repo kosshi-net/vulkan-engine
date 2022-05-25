@@ -1,14 +1,15 @@
 #pragma once 
 
+#include "common.h"
 #include "gfx/gfx_types.h"
-#include "gfx/text/text.h"
-#include "engine.h"
+#include "text/text_common.h"
 
-struct TextUBO {
-	mat4 ortho;
-};
 
-struct VkTextContext {
+
+struct TextRenderer {
+	bool valid;
+	
+	/*
 	struct TextFrameData {
 		VkBuffer         uniform_buffer;
 		VmaAllocation    uniform_alloc;
@@ -20,10 +21,9 @@ struct VkTextContext {
 
 		uint32_t         index_count;
 	} frame[VK_FRAMES];
+	*/
 
-	struct TextContext            *ctx;
-
-	uint32_t                       max_glyphs;
+	TextEngine                     engine;
 
 	VkPipelineLayout               pipeline_layout;
 	VkPipeline                     pipeline;
@@ -37,10 +37,7 @@ struct VkTextContext {
 	VmaAllocation                  texture_alloc;
 };
 
-typedef Handle TextRenderer;
-
-TextRenderer gfx_text_renderer_create (struct TextContext *, uint32_t glyphs);
-void         gfx_text_renderer_destroy(TextRenderer);
-void         gfx_text_draw            (struct Frame*, TextRenderer);
-
-
+TextRenderer text_renderer_create (TextEngine);
+TextRenderer text_renderer_destroy(TextRenderer);
+void         text_renderer_draw   (TextRenderer, TextGeometry, struct Frame*);
+struct TextRenderer *text_renderer_get_struct(TextEngine handle);

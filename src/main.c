@@ -4,8 +4,7 @@
 #include "engine/gfx/gfx.h"
 #include "engine/gfx/camera.h"
 #include "teapot/teapot.h"
-#include "engine/gfx/text/text.h"
-#include "engine/gfx/text/vk_text.h"
+#include "engine/text/text.h"
 #include "engine/ppm.h"
 
 #include "input.h"
@@ -16,60 +15,71 @@ int main(int argc, char**argv)
 {
 	log_info("Hello Vulkan!");
 	
-	engine_init();
-	input_init();
-	term_create();
 
 	struct {
-		struct TextContext *ctx;
-		uint32_t            gfx;
-		struct TextBlock   *hello;
-		struct TextBlock   *stats;
-		struct TextBlock   *cam;
-		struct TextBlock   *tea;
-		struct TextBlock   *ctl_head;
-		struct TextBlock   *ctl_right;
-		struct TextBlock   *ctl_left;
-		int                 ctl_width;
-	} txt = {
-		.ctl_width = 150
-	};
+		TextEngine   engine;
+		TextBlock    block;
+		TextBlock    perf;
 
-	txt.ctx   = txtctx_create(FONT_SANS_16);
-	txt.hello = txtblk_create(txt.ctx, "Hello Vulkan!\n");
-	txt.stats = txtblk_create(txt.ctx, NULL);
-	txt.cam   = txtblk_create(txt.ctx, NULL);
-	txt.tea   = txtblk_create(txt.ctx, NULL);
+		TextRenderer gfx;
+		TextGeometry geom_static;
+		TextGeometry geom;
+
+		TextBlock    ctl_h;
+		TextBlock    ctl_r;
+		TextBlock    ctl_l;
+		uint32_t     ctl_w;
+	} txt = {
+		.ctl_w = 200
+	};
+	
+	txt.engine = text_engine_create();
+	term_create(txt.engine);
+
+	engine_init();
+	input_init();
+
+	txt.block  = text_block_create(txt.engine);
+	txt.perf   = text_block_create(txt.engine);
+	txt.gfx = text_renderer_create(txt.engine);
+	txt.geom = text_geometry_create(txt.gfx, 1024, TEXT_GEOMETRY_DYNAMIC);
+	txt.geom_static = text_geometry_create(txt.gfx, 1024, TEXT_GEOMETRY_STATIC);
+
+	term_create_gfx(txt.gfx);
+
 
 	struct TextStyle s;
-	txtblk_add_text(txt.tea, "Teapot ",       textstyle_set(&s, 0xFFFFFFFF, 0));
-	txtblk_add_text(txt.tea, "ティーポット ", textstyle_set(&s, 0x88FFFFFF, 0));
-	txtblk_add_text(txt.tea, "чайник ",       textstyle_set(&s, 0xFF88FFFF, 0));
-	txtblk_add_text(txt.tea, "ابريق الشاي ",  textstyle_set(&s, 0xFFFF88FF, 0));
-	txtblk_add_text(txt.tea, "茶壶 ",         textstyle_set(&s, 0x8888FFFF, 0));
-	txtblk_add_text(txt.tea, "קוּמקוּם  ",      textstyle_set(&s, 0xFF8888FF, 0));
-	txtblk_add_text(txt.tea, "τσαγιέρα ",     textstyle_set(&s, 0xFF8888FF, 0));
-	txtblk_add_text(txt.tea, "\n\n", NULL);
+	text_block_add(txt.block, "Hello Vulkan!\n", NULL);
+	text_block_add(txt.block, "Teapot ",       textstyle_set(&s, 0xFFFFFFFF, 0));
+	text_block_add(txt.block, "ティーポット ", textstyle_set(&s, 0x44FFFFFF, 0));
+	text_block_add(txt.block, "чайник ",       textstyle_set(&s, 0xFF44FFFF, 0));
+	text_block_add(txt.block, "ابريق الشاي ",  textstyle_set(&s, 0xFFFF44FF, 0));
+	text_block_add(txt.block, "茶壶 ",         textstyle_set(&s, 0xFF4444FF, 0));
+	text_block_add(txt.block, "קוּמקוּם  ",      textstyle_set(&s, 0x4444FFFF, 0));
+	text_block_add(txt.block, "τσαγιέρα ",     textstyle_set(&s, 0x44FF44FF, 0));
+	text_block_add(txt.block, "\n\n", NULL);
 
-	txtblk_add_text(txt.tea, 
-		"Italic text. ティーポット <- if no italic font present, fall back to normal \n", 
-		textstyle_set(&s, 0xFFFFFFFF, FONT_STYLE_ITALIC )
-	);
-	txtblk_add_text(txt.tea, 
-		"This is green bold text. ", 
-		textstyle_set(&s, 0x44FF44FF, FONT_STYLE_BOLD)
-	);
-	txtblk_add_text(txt.tea, 
-		"This is both italic and bold.\n", 
-		textstyle_set(&s, 0xFF4444FF, FONT_STYLE_BOLD | FONT_STYLE_ITALIC)
-	);
-	
-	txtctx_add(txt.hello);
+	text_block_add(txt.block, "Italic ",     
+		textstyle_set(&s, 0xFF4444FF, FONT_STYLE_ITALIC));
 
-	txt.ctl_head = txtblk_create(txt.ctx, 
-		"Controls"
-	);
-	txt.ctl_left = txtblk_create(txt.ctx, 
+	text_block_add(txt.block, "Bold ",     
+		textstyle_set(&s, 0x44FF44FF, FONT_STYLE_BOLD));
+
+	text_block_add(txt.block, "BoldItalic",     
+		textstyle_set(&s, 0x4444FFFF, FONT_STYLE_ITALIC|FONT_STYLE_BOLD));
+
+	text_geometry_set_cursor(txt.geom_static, 32, 64);
+	text_geometry_push(txt.geom_static, txt.block);
+	text_geometry_upload(txt.geom_static, NULL);
+
+
+	txt.ctl_h = text_block_create(txt.engine);
+	txt.ctl_r = text_block_create(txt.engine);
+	txt.ctl_l = text_block_create(txt.engine);
+
+	textstyle_set(&s, 0xFFFFFFFF, FONT_STYLE_ITALIC);
+	text_block_set(txt.ctl_h, "Controls", &s);
+	text_block_set(txt.ctl_l,
 		"\n"
 		"Exit\n"
 		"Lock cursor\n"
@@ -78,27 +88,26 @@ int main(int argc, char**argv)
 		"Up\n"
 		"Down\n"
 		"Zoom\n"
-		"Crash\n"
+		"Crash\n",
+		NULL
 	);
-	txt.ctl_right = txtblk_create(txt.ctx, 
+	text_block_set(txt.ctl_r,
 		"\n"
 		"Q\n"
 		"MB1\n"
-		"ESC\n"
+		"Escape\n"
 		"WASD\n"
 		"Space\n"
 		"RShift\n"
 		"ZX\n"
-		"Delete\n"
+		"Delete\n",
+		NULL
 	);
+	text_block_align(txt.ctl_h, TEXT_ALIGN_CENTER, txt.ctl_w);
+	text_block_align(txt.ctl_l, TEXT_ALIGN_LEFT,   txt.ctl_w);
+	text_block_align(txt.ctl_r, TEXT_ALIGN_RIGHT,  txt.ctl_w);
 
-	txtblk_align(txt.ctl_head,  TEXT_ALIGN_CENTER, txt.ctl_width);
-	txtblk_align(txt.ctl_right, TEXT_ALIGN_RIGHT,  txt.ctl_width);
-	txtblk_align(txt.ctl_left,  TEXT_ALIGN_LEFT,   txt.ctl_width);
-
-	txt.gfx = gfx_text_renderer_create(txt.ctx, 512);
-
-	uint32_t teagfx= gfx_teapot_renderer_create();
+	uint32_t teagfx = gfx_teapot_renderer_create();
 
 	uint32_t frames = 0;
 	uint32_t fps_max = 300;
@@ -110,11 +119,6 @@ int main(int argc, char**argv)
 	static struct Freecam freecam = {
 		.fov = 90.0,
 	};
-
-#ifndef NDEBUG
-	gfx_util_write_ppm(txt.ctx->atlas.w, txt.ctx->atlas.h, txt.ctx->atlas.bitmap, "atlas.ppm");
-	log_debug("Exported atlas to atlas.ppm");
-#endif
 
 	while (!win_should_close()) {
 		
@@ -131,34 +135,26 @@ int main(int argc, char**argv)
 
 		}
 
-		txtctx_clear(txt.ctx);
-		txtctx_set_scissor(txt.ctx, 0, 0, frame->width, frame->height);
-		txtctx_set_root(txt.ctx, -10, -10);
+		/* Text stuff */
 		char print[1024];
 		snprintf(print, sizeof(print), 
-			"FPS: %i/%i, sleeped %.2fms, busy %.2fms\n",
-			fps, fps_max, sleep*1000.0, (delta-sleep)*1000.0
-		);
-		txtblk_edit(txt.stats, print);
-		snprintf(print, sizeof(print), 
+			"FPS: %i/%i, sleeped %.2fms, busy %.2fms\n"
 			"[%.2f, %.2f, %.2f], [%.1f, %.1f], [%.1f]\n",
+			fps, fps_max, sleep*1000.0, (delta-sleep)*1000.0,
 			freecam.pos[0], freecam.pos[1], freecam.pos[2], 
 			freecam.yaw, freecam.pitch,
 			freecam.fov
 		);
-		txtblk_edit(txt.cam, print);
+		text_block_set(txt.perf, print, textstyle_set(&s, 0xFFFFFFFF, FONT_STYLE_MONOSPACE));
+		text_geometry_clear(txt.geom);
+		text_geometry_push(txt.geom, txt.perf);
 
-		txtctx_add(txt.hello);
-		txtctx_add(txt.stats);
-		txtctx_add(txt.tea);
-		txtctx_add(txt.cam);
-
-		txtctx_set_root(txt.ctx, frame->width-txt.ctl_width, 0);
-		txtctx_add(txt.ctl_head);
-		txtctx_set_root(txt.ctx, frame->width-txt.ctl_width, 0);
-		txtctx_add(txt.ctl_right);
-		txtctx_set_root(txt.ctx, frame->width-txt.ctl_width, 0);
-		txtctx_add(txt.ctl_left);
+		text_geometry_set_cursor(txt.geom, frame->width-txt.ctl_w, 0);
+		text_geometry_push(txt.geom, txt.ctl_h);
+		text_geometry_set_cursor(txt.geom, frame->width-txt.ctl_w, 0);
+		text_geometry_push(txt.geom, txt.ctl_r);
+		text_geometry_set_cursor(txt.geom, frame->width-txt.ctl_w, 0);
+		text_geometry_push(txt.geom, txt.ctl_l);
 
 		/* Camera stuff */
 		freecam_update(&freecam, delta);
@@ -171,10 +167,13 @@ int main(int argc, char**argv)
 		);
 		frame->camera.projection[1][1] *= -1; 
 
+		/* Render stuff */
 		gfx_teapot_draw(frame);
-		gfx_text_draw(frame, txt.gfx);
 		term_update(frame);
+		text_renderer_draw(txt.gfx, txt.geom, frame);
+		text_renderer_draw(txt.gfx, txt.geom_static, frame);
 
+		/* End stuff */
 		frame_end(frame);
 		engine_tick();
 
@@ -184,6 +183,7 @@ int main(int argc, char**argv)
 		}
 		frames++;
 	}
+	text_engine_export_atlas(txt.engine);
 
 	engine_wait_idle();
 	gfx_teapot_renderer_destroy(teagfx);

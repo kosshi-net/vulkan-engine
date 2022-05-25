@@ -2,7 +2,6 @@
 #include "gfx/gfx.h"
 #include "gfx/gfx_types.h"
 #include "gfx/vk_swapchain.h"
-#include "gfx/text/vk_text.h"
 
 extern struct VkEngine vk;
 
@@ -113,6 +112,7 @@ void vk_create_swapchain(void)
 
 	/* There's an unavoidable race condition here :( khronos pls fix 
 	 * https://github.com/KhronosGroup/Vulkan-Docs/issues/1144 */
+
 
 	uint32_t image_num =swap->capabilities.minImageCount+1;
 	if (swap->capabilities.maxImageCount > 0)

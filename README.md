@@ -41,7 +41,7 @@ use. Apart from a simple demo, no actual game will be implemented here.
 - Shaping (HarfBuzz)
 - Supports fallback fonts (using a brute force approach)
 - Supports bidirectional text (GNU Fribidi)
-- Rudimentary support for line wrapping and basic layouting (centering, aligning)
+- Rudimentary support for line wrapping and basic layouting (centering, aligning, indenting)
 	- TODO: Line justification
 - Text styling: color, italic and bold 
 	- TODO: Underline/strikethrough
@@ -88,5 +88,3 @@ Install the following using your package manager:
 - HarfBuzz
 - GNU Fribidi
 
-# License
-MIT

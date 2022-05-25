@@ -271,6 +271,7 @@ void vk_recreate_swapchain()
 	vk_create_framebuffers();
 
 	event_fire(EVENT_VK_SWAPCHAIN_CREATE, NULL);
+	vk.framebuffer_resize = false;
 }
 
 
@@ -288,6 +289,7 @@ struct VkFrame *gfx_frame_get()
 			&frame->image_index);
 
 	if (ret == VK_ERROR_OUT_OF_DATE_KHR ) {
+		log_debug("Recreate");
 		vk_recreate_swapchain();
 	} else if (ret != VK_SUCCESS && ret != VK_SUBOPTIMAL_KHR) {
 		engine_crash("Unhandled image capture error");
@@ -389,9 +391,10 @@ void gfx_frame_submit(struct VkFrame *frame)
 	};
 	ret = vkQueuePresentKHR(vk.present_queue, &present_info);
 
-	if(ret == VK_ERROR_OUT_OF_DATE_KHR 
-	|| ret == VK_SUBOPTIMAL_KHR 
-	|| vk.framebuffer_resize){
+	if (ret == VK_ERROR_OUT_OF_DATE_KHR 
+	 || ret == VK_SUBOPTIMAL_KHR 
+	 || vk.framebuffer_resize)
+	{
 		vk_recreate_swapchain();
 	} else if (ret != VK_SUCCESS) {
 		engine_crash("vkQueuePresentKHR failed");
@@ -536,6 +539,8 @@ void gfx_init(void)
 		vk_init_frame( &vk.frames[i] );
 		vk.frames[i].id = i;
 	}
+
+	log_debug("Swapchain images: %i", vk.swapchain_img_num);
 }
 
 void gfx_destroy()
