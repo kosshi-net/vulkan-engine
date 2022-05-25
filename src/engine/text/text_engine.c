@@ -4,6 +4,7 @@
 #include "engine.h"
 #include "log/log.h"
 #include "ppm.h"
+#include "handle/handle.h"
 
 #include <errno.h>
 #include <iconv.h>
@@ -16,26 +17,11 @@
 
 static FT_Library ft;
 
-static struct TextEngine text_engines[1];
+static struct HandleAllocator alloc = HANDLE_ALLOCATOR(struct TextEngine, 1);
 
 struct TextEngine *text_engine_get_struct(TextEngine handle)
 {
-	struct TextEngine *this = &text_engines[handle-1];
-	if (!this->valid) 
-		engine_crash("Invalid TextEngine handle");
-	return this;
-}
-
-TextEngine text_engine_alloc(void)
-{
-	for (ufast32_t i = 0; i < LENGTH(text_engines); i++) {
-		if (!text_engines[i].valid) {
-			text_engines[i].valid = true;
-			return i+1;
-		}
-	}
-	engine_crash("Too many TextEngines");
-	return 0; 
+	return handle_dereference(&alloc, handle);
 }
 
 void add_font(
@@ -126,7 +112,8 @@ void create_bin(
 
 TextEngine text_engine_create(void)
 {
-	TextEngine handle = text_engine_alloc();
+	TextEngine handle = handle_allocate(&alloc);
+
 	struct TextEngine *restrict this = text_engine_get_struct(handle);
 
 	uint32_t ret; 
@@ -235,7 +222,7 @@ struct GlyphSlot *text_engine_cache_glyph(
 	uint32_t font_id,
 	uint32_t code)
 {
-	struct TextEngine *restrict this = text_engine_get_struct(handle);
+	struct TextEngine *restrict this = handle_dereference(&alloc, handle);
 
 	struct Atlas    *atlas = &this->atlas;
 	struct AtlasBin *bin;

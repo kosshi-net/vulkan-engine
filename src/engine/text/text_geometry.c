@@ -4,31 +4,19 @@
 #include "text/text_engine.h"
 #include "common.h"
 #include "event/event.h"
+#include "handle/handle.h"
 
 #include "gfx/gfx.h"
 #include "gfx/vk_util.h"
 
 extern struct VkEngine vk;
 
-static struct TextGeometry text_geoms[8];
+
+static struct HandleAllocator alloc = HANDLE_ALLOCATOR(struct TextGeometry, 8);
+
 struct TextGeometry *text_geometry_get_struct(TextGeometry handle)
 {
-	if (handle == 0) engine_crash("NULL handle");
-	struct TextGeometry *this = &text_geoms[handle-1];
-	if (!this->valid) 
-		engine_crash("Invalid handle");
-	return this;
-}
-TextGeometry text_geometry_alloc(void)
-{
-	for (ufast32_t i = 0; i < LENGTH(text_geoms); i++) {
-		if (!text_geoms[i].valid) {
-			text_geoms[i].valid = true;
-			return i+1;
-		}
-	}
-	engine_crash("Out of slots");
-	return 0; 
+	return handle_dereference(&alloc, handle);
 }
 
 void text_geometry_destroy_callback(TextGeometry handle, void*arg)
@@ -61,7 +49,7 @@ TextGeometry text_geometry_create(
 	size_t                max_glyphs,
 	enum TextGeometryType type)
 {
-	TextGeometry                  handle = text_geometry_alloc();
+	TextGeometry                  handle = handle_allocate(&alloc);
 	struct TextGeometry *restrict this   = text_geometry_get_struct(handle);
 	struct TextRenderer *restrict gfx    = text_renderer_get_struct(gfx_handle);
 

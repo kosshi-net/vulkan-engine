@@ -104,7 +104,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL vk_debug_callback(
 	} filter[] = {
 		{
 			.message_id = 0x7cd0911d,
-			.warn       = "This is a known issue of the Vulkan spec. Muted.",
+			.warn       = 
+				"Known Vulkan issue. "
+				"This message will be filtered.",
 			.pass       = 1,
 		}
 	};

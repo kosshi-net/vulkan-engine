@@ -49,6 +49,12 @@ use. Apart from a simple demo, no actual game will be implemented here.
 - TODO: Vertical text
 - TODO: Cursor
 
+This is still a special-purpose text renderer, with certain limitations.
+Caching system has to be manually tuned for usage patterns, fonts and font 
+sizes. At runtime you need to choose from a limited set of font configurations.
+It's also only good for 2D use, as SDF isn't suitable for runtime glyph 
+generation. Only monochrome glyphs are supported as well.
+
 ### To fix (besides the obvious)
 - Handle minUniformBufferOffsetAlignment properly
 	- Temp. patched with \_\_attribute\_\_ aligned 256
@@ -57,12 +63,8 @@ use. Apart from a simple demo, no actual game will be implemented here.
 	- Stop recreating the staging buffer
 - Make sure atlas upload is synced properly 
 	- Pipeline barriers?
-
-This is still a special-purpose text renderer, with certain limitations.
-Caching system has to be manually tuned for usage patterns, fonts and font 
-sizes. At runtime you need to choose from a limited set of font configurations.
-It's also only good for 2D use, as SDF isn't suitable for runtime glyph 
-generation. Only monochrome glyphs are supported as well.
+- Mechanism to safely destroy vulkan objects during runtime
+- Improve handles
 
 ## Building
 ### Linux 

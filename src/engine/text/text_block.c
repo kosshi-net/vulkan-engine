@@ -2,31 +2,17 @@
 
 #include "common.h"
 #include "ppm.h"
+#include "handle/handle.h"
 
 #include <errno.h>
 #include <iconv.h>
 #include <fribidi.h>
 
-static struct TextBlock text_blocks[1024];
+static struct HandleAllocator alloc = HANDLE_ALLOCATOR(struct TextBlock, 1024);
 
 struct TextBlock *text_block_get_struct(TextEngine handle)
 {
-	struct TextBlock *this = &text_blocks[handle-1];
-	if (!this->valid) 
-		engine_crash("Invalid TextEngine handle");
-	return this;
-}
-
-TextBlock text_block_alloc(void)
-{
-	for (ufast32_t i = 0; i < LENGTH(text_blocks); i++) {
-		if (!text_blocks[i].valid) {
-			text_blocks[i].valid = true;
-			return i+1;
-		}
-	}
-	engine_crash("Out of slots");
-	return 0; 
+	return handle_dereference(&alloc, handle);
 }
 
 Array(utf32_t) text_bidi( Array(utf32_t) input ) 
@@ -446,7 +432,7 @@ void text_block_set(
 
 TextBlock text_block_create(TextEngine engine_handle)
 {
-	TextBlock handle = text_block_alloc();
+	TextBlock handle = handle_allocate(&alloc);
 	struct TextBlock  *restrict this   = text_block_get_struct(handle);
 	struct TextEngine *restrict engine = text_engine_get_struct(engine_handle);
 	

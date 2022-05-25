@@ -47,7 +47,6 @@ int main(int argc, char**argv)
 
 	term_create_gfx(txt.gfx);
 
-
 	struct TextStyle s;
 	text_block_add(txt.block, "Hello Vulkan!\n", NULL);
 	text_block_add(txt.block, "Teapot ",       textstyle_set(&s, 0xFFFFFFFF, 0));
@@ -59,14 +58,14 @@ int main(int argc, char**argv)
 	text_block_add(txt.block, "τσαγιέρα ",     textstyle_set(&s, 0x44FF44FF, 0));
 	text_block_add(txt.block, "\n\n", NULL);
 
-	text_block_add(txt.block, "Italic ",     
-		textstyle_set(&s, 0xFF4444FF, FONT_STYLE_ITALIC));
+	textstyle_set(&s, 0xFF4444FF, FONT_STYLE_ITALIC);
+	text_block_add(txt.block, "Italic ", &s);
 
-	text_block_add(txt.block, "Bold ",     
-		textstyle_set(&s, 0x44FF44FF, FONT_STYLE_BOLD));
+	textstyle_set(&s, 0x44FF44FF, FONT_STYLE_BOLD);
+	text_block_add(txt.block, "Bold ", &s); 
 
-	text_block_add(txt.block, "BoldItalic",     
-		textstyle_set(&s, 0x4444FFFF, FONT_STYLE_ITALIC|FONT_STYLE_BOLD));
+	textstyle_set(&s, 0x4444FFFF, FONT_STYLE_ITALIC|FONT_STYLE_BOLD);
+	text_block_add(txt.block, "BoldItalic", &s);
 
 	text_geometry_set_cursor(txt.geom_static, 32, 64);
 	text_geometry_push(txt.geom_static, txt.block);

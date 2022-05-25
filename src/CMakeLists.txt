@@ -15,9 +15,9 @@ add_executable( engine
 
 	engine/event/event.c
 	engine/win/win.c
+	engine/handle/handle.c
 
 	engine/gfx/gfx.c
-
 	engine/gfx/vk_util.c
 	engine/gfx/vk_instance.c
 	engine/gfx/vk_device.c

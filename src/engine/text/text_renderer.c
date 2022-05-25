@@ -9,29 +9,15 @@
 #include "common.h"
 #include "res.h"
 #include "event/event.h"
-
+#include "handle/handle.h"
 
 extern struct VkEngine vk;
 
-static struct TextRenderer text_renderers[1];
+static struct HandleAllocator alloc = HANDLE_ALLOCATOR(struct TextRenderer, 1);
+
 struct TextRenderer *text_renderer_get_struct(TextEngine handle)
 {
-	if (handle == 0) engine_crash("NULL handle");
-	struct TextRenderer *this = &text_renderers[handle-1];
-	if (!this->valid) 
-		engine_crash("Invalid handle");
-	return this;
-}
-TextRenderer text_renderer_alloc(void)
-{
-	for (ufast32_t i = 0; i < LENGTH(text_renderers); i++) {
-		if (!text_renderers[i].valid) {
-			text_renderers[i].valid = true;
-			return i+1;
-		}
-	}
-	engine_crash("Out of slots");
-	return 0; 
+	return handle_dereference(&alloc, handle);
 }
 
 
@@ -421,7 +407,7 @@ uint16_t *create_index_buffer(size_t max_glyphs, size_t *size)
 
 TextRenderer text_renderer_create(TextEngine engine_handle)
 {
-	TextRenderer                  handle = text_renderer_alloc();
+	TextRenderer                  handle = handle_allocate(&alloc);
 	struct TextRenderer *restrict this   = text_renderer_get_struct(handle);
 	this->engine = engine_handle;
 
