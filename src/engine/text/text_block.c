@@ -1,7 +1,6 @@
 #include "text/text_block.h"
 
 #include "common.h"
-#include "ppm.h"
 #include "handle/handle.h"
 
 #include <errno.h>

@@ -8,8 +8,7 @@ Example: `TextEngine` is a handle to an interal `struct TextEngine *`. These
 are two distinct types. The user should not ever have to use the pointer types.
 
 Do note handles are not type-checked compile-time, as they're all the same 
-underlying type. Runtime checking, and improving the handle-system in general 
-is TODO.
+underlying type.
 
 ## API Objects
 The objects are designed to separate handling and rendering logic.
@@ -23,6 +22,8 @@ The objects are designed to separate handling and rendering logic.
 - Handles all the alignment, layout, styles, colors, etc text processing
 - Stores processed blocks of text in a flexible intermediate format
 - Converting utf8 text to a TextBlock *can* be expensive, intended to be used as a cache
+- Changing layout is very cheap
+- Is oblivious to the actual position on-screen, only understands lines and their maximum widths
 - Depends on TextEngine
 
 ### TextRenderer
@@ -36,8 +37,9 @@ The objects are designed to separate handling and rendering logic.
 - Converts TextBlocks to actual geometry and uploads to device
 - Intended use is to draw many textblocks at once, with a single draw call
 - Able to combine several TextBlocks with limited layout functionality
+- Decides the final origin of TextBlocks on-screen
 - Can be set up to be static or dynamic (upload once / every frame)
+- TODO: Allows for dynamic scissor and positioning of the combined geometry (without reupload)
 - Depends on TextRenderer, TextBlock
-- TODO: Allows for dynamic scissor and positioning (without reupload)
 
 

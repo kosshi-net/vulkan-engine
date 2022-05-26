@@ -1,10 +1,11 @@
-#include "fileutil.h"
+#include "util/file.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <stddef.h>
 
-char *read_file(const char *path, size_t *size){
+char *read_file(const char *path, size_t *size)
+{
 	FILE *f = fopen(path, "r");
 	if(f==NULL) return NULL;
 

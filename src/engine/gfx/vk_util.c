@@ -4,7 +4,7 @@
 #include "engine.h"
 #include "gfx.h"
 #include "gfx_types.h"
-#include "res.h"
+#include "res/res.h"
 
 extern struct VkEngine vk;
 

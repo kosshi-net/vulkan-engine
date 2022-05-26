@@ -7,7 +7,7 @@
 #include "gfx/vk_util.h"
 
 #include "common.h"
-#include "res.h"
+#include "res/res.h"
 #include "event/event.h"
 #include "handle/handle.h"
 

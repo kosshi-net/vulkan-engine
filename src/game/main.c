@@ -5,7 +5,7 @@
 #include "engine/gfx/camera.h"
 #include "teapot/teapot.h"
 #include "engine/text/text.h"
-#include "engine/ppm.h"
+#include "engine/util/ppm.h"
 
 #include "input.h"
 #include "freecam.h"

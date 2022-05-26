@@ -37,7 +37,7 @@ void _log(
 		level_chars[level], file, line
 	);
 
-	while( len < 36 ) {
+	while (len < 38) {
 		buffer[len] = '.';
 		len++;
 	}

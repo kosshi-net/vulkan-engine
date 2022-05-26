@@ -1,6 +1,6 @@
-#include "res.h"
+#include "res/res.h"
 #include "common.h"
-#include "fileutil.h"
+#include "util/file.h"
 
 static const char * const resource_paths[] = {
 	[RES_NONE]              =  NULL,

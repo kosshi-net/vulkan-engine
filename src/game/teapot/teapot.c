@@ -6,7 +6,7 @@
 #include "log/log.h"
 #include "array.h"
 #include "event/event.h"
-#include "res.h"
+#include "res/res.h"
 
 #include <fast_obj.h>
 #include <stb_image.h>

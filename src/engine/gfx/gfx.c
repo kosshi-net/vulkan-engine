@@ -1,8 +1,8 @@
 #include "common.h"
 #include "engine.h"
 #include "array.h"
-#include "fileutil.h"
-#include "res.h"
+#include "util/file.h"
+#include "res/res.h"
 #include "win/win.h"
 #include "event/event.h"
 

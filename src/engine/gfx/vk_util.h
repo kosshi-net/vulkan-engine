@@ -1,7 +1,7 @@
 #pragma once
 #include "common.h"
 #include "gfx_types.h"
-#include "res.h"
+#include "res/res.h"
 
 void vk_create_image_vma(
 	uint32_t width, uint32_t height,

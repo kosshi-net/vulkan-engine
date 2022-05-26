@@ -1,4 +1,4 @@
-#include "ppm.h"
+#include "util/ppm.h"
 #include <stdio.h>
 
 void gfx_util_write_ppm(
@@ -20,4 +20,5 @@ void gfx_util_write_ppm(
 	}
 	
 	fclose(fp);
-};
+}
+
