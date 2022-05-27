@@ -8,20 +8,6 @@
 
 struct TextRenderer {
 	bool valid;
-	
-	/*
-	struct TextFrameData {
-		VkBuffer         uniform_buffer;
-		VmaAllocation    uniform_alloc;
-		VkDescriptorSet  descriptor_set;
-
-		VkBuffer         vertex_buffer;
-		VmaAllocation    vertex_alloc;
-		void            *vertex_mapping;
-
-		uint32_t         index_count;
-	} frame[VK_FRAMES];
-	*/
 
 	TextEngine                     engine;
 

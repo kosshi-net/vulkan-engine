@@ -8,12 +8,12 @@
 #define TEXT_INDICES_PER_GLYPH 6
 
 struct TextVertex {
-	float   pos  [2];
-	float   uv   [2];
-	uint8_t color[4];
+	float    pos  [2];
+	float    uv   [2];
+	uint8_t  color[4];
 };
 
-struct TextUBO {
+struct TextUniform {
 	mat4 ortho;
 };
 
@@ -28,8 +28,6 @@ struct TextGeometry {
 	enum TextGeometryType type;
 	uint32_t              frame_count;
 	struct TextFrameData {
-		VkBuffer         uniform_buffer;
-		VmaAllocation    uniform_alloc;
 		VkDescriptorSet  descriptor_set;
 
 		VkBuffer         vertex_buffer;

@@ -20,7 +20,6 @@ struct TextRenderer *text_renderer_get_struct(TextEngine handle)
 	return handle_dereference(&alloc, handle);
 }
 
-
 static VkVertexInputBindingDescription text_binding = {
 	.binding   = 0,
 	.stride    = sizeof(struct TextVertex),
@@ -52,6 +51,7 @@ void vk_text_create_pipeline(struct TextRenderer *restrict this)
 {
 	VkShaderModule vert_shader = vk_create_shader_module(RES_SHADER_VERT_TEXT);
 	VkShaderModule frag_shader = vk_create_shader_module(RES_SHADER_FRAG_TEXT);
+
 
 	VkPipelineShaderStageCreateInfo shader_stages[] = {
 		{
@@ -176,8 +176,14 @@ void vk_text_create_pipeline(struct TextRenderer *restrict this)
 		.minDepthBounds        = 0.0f,
 		.maxDepthBounds        = 1.0f,
 		.stencilTestEnable     = VK_FALSE,
-		/*.front = {},
-		.back = {},*/
+	};
+
+	VkPushConstantRange push_constants[] = {
+		{
+		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
+		.offset = 0,
+		.size = sizeof(struct TextUniform)
+		}
 	};
 
 	VkDescriptorSetLayout layouts[] = { 
@@ -188,8 +194,8 @@ void vk_text_create_pipeline(struct TextRenderer *restrict this)
 		.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO,
 		.setLayoutCount = LENGTH(layouts),
 		.pSetLayouts = layouts,
-		.pushConstantRangeCount = 0,
-		.pPushConstantRanges = NULL,
+		.pushConstantRangeCount = LENGTH(push_constants),
+		.pPushConstantRanges = push_constants,
 	};
 	
 	VkResult ret = vkCreatePipelineLayout(vk.dev, 
@@ -228,24 +234,14 @@ void vk_text_create_pipeline(struct TextRenderer *restrict this)
 
 void vk_text_create_descriptor_layout(struct TextRenderer *restrict this)
 {
-	VkDescriptorSetLayoutBinding ubo_binding = {
-		.binding = 0, 
-		.descriptorType = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-		.descriptorCount = 1,
-		.stageFlags = VK_SHADER_STAGE_VERTEX_BIT,
-		.pImmutableSamplers = NULL,
-	};
-
-	VkDescriptorSetLayoutBinding sampler_binding = {
-		.binding = 1,
-		.descriptorCount = 1,
-		.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-		.pImmutableSamplers = NULL,
-		.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
-	};
-	
 	VkDescriptorSetLayoutBinding binding[] = {
-		ubo_binding, sampler_binding
+		{
+			.binding = 0,
+			.descriptorCount = 1,
+			.descriptorType = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+			.pImmutableSamplers = NULL,
+			.stageFlags = VK_SHADER_STAGE_FRAGMENT_BIT,
+		}
 	};
 
 	VkDescriptorSetLayoutCreateInfo layout_info = {
@@ -442,7 +438,7 @@ void text_renderer_draw(
 
 	uint32_t f = (geom->type == TEXT_GEOMETRY_STATIC) ? 0 : frame->vk->id;
 
-	struct TextUBO ubo;
+	struct TextUniform ubo;
 
 	glm_ortho(
 		0.0, vk.swapchain_extent.width,
@@ -451,10 +447,6 @@ void text_renderer_draw(
 		ubo.ortho
 	);
 
-	void *data;
-	vmaMapMemory(vk.vma, geom->frame[f].uniform_alloc, &data);
-	memcpy(data, &ubo, sizeof(ubo));
-	vmaUnmapMemory(vk.vma, geom->frame[f].uniform_alloc);
 
 	if (geom->type == TEXT_GEOMETRY_DYNAMIC) {
 		text_geometry_upload(geom_handle, frame);
@@ -466,6 +458,13 @@ void text_renderer_draw(
 	}
 
 	VkCommandBuffer cmd = frame->vk->cmd_buf;
+
+	vkCmdPushConstants(cmd, 
+		this->pipeline_layout, 
+		VK_SHADER_STAGE_VERTEX_BIT, 
+		0, sizeof(struct TextUniform),
+		&ubo
+	);
 
 	vkCmdBindPipeline(cmd, VK_PIPELINE_BIND_POINT_GRAPHICS, this->pipeline);
 

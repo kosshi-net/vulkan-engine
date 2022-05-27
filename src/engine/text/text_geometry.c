@@ -34,10 +34,6 @@ TextGeometry text_geometry_destroy(TextGeometry handle)
 			this->frame[i].vertex_buffer, 
 			this->frame[i].vertex_alloc
 		);
-
-		vmaDestroyBuffer(vk.vma, 
-			this->frame[i].uniform_buffer, this->frame[i].uniform_alloc
-		);
 	}
 
 	this->valid = false;
@@ -82,13 +78,6 @@ TextGeometry text_geometry_create(
 		         VMA_ALLOCATION_CREATE_HOST_ACCESS_ALLOW_TRANSFER_INSTEAD_BIT
 	};
 	for (ufast32_t i = 0; i < this->frame_count; i++) {
-		vk_create_buffer_vma(
-			sizeof(struct TextUBO),
-			VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-			VMA_MEMORY_USAGE_CPU_TO_GPU,
-			&this->frame[i].uniform_buffer,
-			&this->frame[i].uniform_alloc
-		);
 
 		VkDescriptorSetAllocateInfo desc_ainfo = {
 			.sType = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO,
@@ -101,11 +90,6 @@ TextGeometry text_geometry_create(
 		);
 		if(ret != VK_SUCCESS) engine_crash("vkAllocateDescriptorSets failed");
 
-		VkDescriptorBufferInfo uniform_buffer_info = {
-			.buffer = this->frame[i].uniform_buffer,
-			.offset = 0,
-			.range  = sizeof(struct TextUBO)
-		};
 		VkDescriptorImageInfo uniform_image_info = {
 			.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL,
 			.imageView   = gfx->texture_view,
@@ -116,17 +100,6 @@ TextGeometry text_geometry_create(
 				.sType              = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
 				.dstSet             = this->frame[i].descriptor_set,
 				.dstBinding         = 0,
-				.dstArrayElement    = 0,
-				.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
-				.descriptorCount    = 1,
-				.pBufferInfo        = &uniform_buffer_info,
-				.pImageInfo         = NULL,
-				.pTexelBufferView   = NULL,
-			},
-			{
-				.sType              = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET,
-				.dstSet             = this->frame[i].descriptor_set,
-				.dstBinding         = 1,
 				.dstArrayElement    = 0,
 				.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
 				.descriptorCount    = 1,
