@@ -21,7 +21,7 @@ static struct HandleAllocator alloc = HANDLE_ALLOCATOR(struct TextEngine, 1);
 
 struct TextEngine *text_engine_get_struct(TextEngine handle)
 {
-	return handle_dereference(&alloc, handle);
+	return handle_deref(&alloc, handle);
 }
 
 void add_font(
@@ -112,7 +112,7 @@ void create_bin(
 
 TextEngine text_engine_create(void)
 {
-	TextEngine handle = handle_allocate(&alloc);
+	TextEngine handle = handle_alloc(&alloc);
 
 	struct TextEngine *restrict this = text_engine_get_struct(handle);
 
@@ -222,7 +222,7 @@ struct GlyphSlot *text_engine_cache_glyph(
 	uint32_t font_id,
 	uint32_t code)
 {
-	struct TextEngine *restrict this = handle_dereference(&alloc, handle);
+	struct TextEngine *restrict this = handle_deref(&alloc, handle);
 
 	struct Atlas    *atlas = &this->atlas;
 	struct AtlasBin *bin;

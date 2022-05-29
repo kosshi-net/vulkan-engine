@@ -12,6 +12,9 @@ static const char * const resource_paths[] = {
 
 	[RES_SHADER_FRAG_TEXT]  = "text.frag.spv",
 	[RES_SHADER_VERT_TEXT]  = "text.vert.spv",
+
+	[RES_SHADER_FRAG_WIDGET]  = "widget.frag.spv",
+	[RES_SHADER_VERT_WIDGET]  = "widget.vert.spv",
 };
 
 void *res_file(enum Resource res, size_t *size)

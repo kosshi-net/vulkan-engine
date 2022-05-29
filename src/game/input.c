@@ -1,5 +1,6 @@
 #include "engine/engine.h"
 #include "input.h"
+#include "term.h"
 #include "win/win.h"
 
 static GLFWwindow *window;
@@ -16,8 +17,15 @@ void input_mouse_callback(
 	GLFWwindow *window, 
 	int key, int action, int mods
 ){
+	if (action == GLFW_PRESS) {
+		if (key == GLFW_MOUSE_BUTTON_LEFT) {
+			term_mouse(action);
+		}
+	}
+
 	if (action == GLFW_RELEASE) {
 		if (key == GLFW_MOUSE_BUTTON_LEFT) {
+			if (term_mouse(action)) return;
 			input_cursor_lock();
 		}
 	}

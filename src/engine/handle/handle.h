@@ -26,7 +26,7 @@ struct HandleAllocator {
 };
 
 
-Handle handle_allocate   (struct HandleAllocator *);
-void   handle_free       (struct HandleAllocator *, Handle *);
-void  *handle_dereference(struct HandleAllocator *, Handle handle);
+Handle handle_alloc(struct HandleAllocator *);
+void   handle_free (struct HandleAllocator *, Handle *);
+void  *handle_deref(struct HandleAllocator *, Handle handle);
 

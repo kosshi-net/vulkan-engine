@@ -15,9 +15,8 @@ use. Apart from a simple demo, no actual game will be implemented here.
 - Modular renderer
 - Logging system
 - Misc debugging tools
-- TODO: UI toolkit
+- WIP: UI toolkit
 - TODO: In-game shell (with maybe LUA integration?)
-- TODO: Memory managment / better general purpose allocators
 - TODO: Config system
 - TODO: Multithreading (fibers?)
 - TODO: Audio
@@ -26,14 +25,6 @@ use. Apart from a simple demo, no actual game will be implemented here.
 - Linux
 - TODO: Windows 
 
-### Vulkan
-- Dynamic pipelines for fast resize
-- Dynamic descriptors used for rendering the same model with different transforms
-- UBOs used instead of push constants
-- Using VMA
-- Targets Vulkan 1.2 (so no dynamic render passes for now)
-- Extensive use of C's designated initialziers makes the code the prettiest Vulkan you'll ever see 😊
-
 ### Text rendering 
 - Decent unicode support
 - Textured quads type 
@@ -41,7 +32,7 @@ use. Apart from a simple demo, no actual game will be implemented here.
 - Shaping (HarfBuzz)
 - Supports fallback fonts (using a brute force approach)
 - Supports bidirectional text (GNU Fribidi)
-- Rudimentary support for line wrapping and basic layouting (centering, aligning, indenting)
+- Linewrap and basic layouting (centering, aligning, indenting)
 	- TODO: Line justification
 - Text styling: color, italic and bold 
 	- TODO: Underline/strikethrough
@@ -64,7 +55,6 @@ generation. Only monochrome glyphs are supported as well.
 - Make sure atlas upload is synced properly 
 	- Pipeline barriers?
 - Mechanism to safely destroy vulkan objects during runtime
-- Improve handles
 
 ## Building
 ### Linux 

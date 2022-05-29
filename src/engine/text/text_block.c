@@ -11,7 +11,7 @@ static struct HandleAllocator alloc = HANDLE_ALLOCATOR(struct TextBlock, 1024);
 
 struct TextBlock *text_block_get_struct(TextEngine handle)
 {
-	return handle_dereference(&alloc, handle);
+	return handle_deref(&alloc, handle);
 }
 
 Array(utf32_t) text_bidi( Array(utf32_t) input ) 
@@ -337,7 +337,8 @@ void text_block_align(
 			struct GlyphQuad *restrict quad = this->quads+g;
 			if (!add && quad->alignment_newline)
 				add = this->wrap_indent;
-			quad->alignment_x -= add;
+			quad->alignment_x = add;
+			quad->offset_x += add;
 		}
 	}
 
@@ -431,7 +432,7 @@ void text_block_set(
 
 TextBlock text_block_create(TextEngine engine_handle)
 {
-	TextBlock handle = handle_allocate(&alloc);
+	TextBlock handle = handle_alloc(&alloc);
 	struct TextBlock  *restrict this   = text_block_get_struct(handle);
 	struct TextEngine *restrict engine = text_engine_get_struct(engine_handle);
 	

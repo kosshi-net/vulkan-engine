@@ -7,6 +7,8 @@
 #include "engine/text/text.h"
 #include "engine/util/ppm.h"
 
+#include "engine/widget/widget_renderer.h"
+
 #include "input.h"
 #include "freecam.h"
 #include "term.h"
@@ -24,6 +26,7 @@ int main(int argc, char**argv)
 		TextRenderer gfx;
 		TextGeometry geom_static;
 		TextGeometry geom;
+		TextGeometry term;
 
 		TextBlock    ctl_h;
 		TextBlock    ctl_r;
@@ -45,7 +48,10 @@ int main(int argc, char**argv)
 	txt.geom = text_geometry_create(txt.gfx, 1024, TEXT_GEOMETRY_DYNAMIC);
 	txt.geom_static = text_geometry_create(txt.gfx, 1024, TEXT_GEOMETRY_STATIC);
 
-	term_create_gfx(txt.gfx);
+
+	Handle gui = widget_renderer_create();
+
+	txt.term = term_create_gfx(txt.gfx, gui);
 
 	struct TextStyle s;
 	text_block_add(txt.block, "Hello Vulkan!\n", NULL);
@@ -105,6 +111,7 @@ int main(int argc, char**argv)
 	text_block_align(txt.ctl_h, TEXT_ALIGN_CENTER, txt.ctl_w);
 	text_block_align(txt.ctl_l, TEXT_ALIGN_LEFT,   txt.ctl_w);
 	text_block_align(txt.ctl_r, TEXT_ALIGN_RIGHT,  txt.ctl_w);
+
 
 	uint32_t teagfx = gfx_teapot_renderer_create();
 
@@ -168,9 +175,17 @@ int main(int argc, char**argv)
 
 		/* Render stuff */
 		gfx_teapot_draw(frame);
+
+		widget_renderer_clear(gui);
+		widget_renderer_quad(gui, 10,  210, 50, 50, 256, 0xFF0000FF);
+		widget_renderer_quad(gui, 30,  230, 50, 50, 256, 0x00FF00FF);
 		term_update(frame);
+		widget_renderer_draw(gui, frame);
+
+		text_renderer_draw(txt.gfx, txt.term, frame);
 		text_renderer_draw(txt.gfx, txt.geom, frame);
 		text_renderer_draw(txt.gfx, txt.geom_static, frame);
+
 
 		/* End stuff */
 		frame_end(frame);

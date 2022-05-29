@@ -16,6 +16,7 @@ add_executable( engine
 	text/text_block.c
 	text/text_renderer.c
 	text/text_geometry.c
+	widget/widget_renderer.c
 	gfx/vma.cpp
 )
 

@@ -7,13 +7,14 @@ layout(push_constant) uniform TextUniform {
 layout(location = 0) out vec2 fragTexUV;
 layout(location = 1) out vec4 color;
 
-layout(location = 0) in vec2 inPosition;
-layout(location = 1) in vec2 inTexCoord;
-layout(location = 2) in vec4 inColor;
+layout(location = 0) in vec2  inPosition;
+layout(location = 1) in vec2  inTexCoord;
+layout(location = 2) in vec4  inColor;
+layout(location = 3) in float inDepth;
 
 void main() 
 {
-	gl_Position = uni.ortho * vec4(inPosition, 0.0, 1.0);
+	gl_Position = uni.ortho * vec4(inPosition, -inDepth, 1.0);
 	fragTexUV = inTexCoord.xy;
 	color = inColor;
 }

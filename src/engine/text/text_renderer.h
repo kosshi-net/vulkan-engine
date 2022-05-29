@@ -4,8 +4,6 @@
 #include "gfx/gfx_types.h"
 #include "text/text_common.h"
 
-
-
 struct TextRenderer {
 	bool valid;
 

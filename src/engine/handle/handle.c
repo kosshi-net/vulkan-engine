@@ -14,7 +14,7 @@ void handle_allocator_create(struct HandleAllocator *this)
 		this->type_hash = type_counter++;
 }
 
-Handle handle_allocate(struct HandleAllocator *restrict this)
+Handle handle_alloc(struct HandleAllocator *restrict this)
 {
 	if (this->buffer == NULL) 
 		handle_allocator_create(this);
@@ -62,7 +62,7 @@ void handle_free(struct HandleAllocator *restrict this, Handle *handle)
 	*handle = 0;
 }
 
-void *handle_dereference(struct HandleAllocator *this, Handle handle)
+void *handle_deref(struct HandleAllocator *this, Handle handle)
 {
 	uint32_t index = handle_index(this, handle);
 	return this->buffer + index * this->item_size;

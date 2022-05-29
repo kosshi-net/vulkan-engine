@@ -11,6 +11,7 @@ struct TextVertex {
 	float    pos  [2];
 	float    uv   [2];
 	uint8_t  color[4];
+	uint16_t depth;
 };
 
 struct TextUniform {
@@ -23,8 +24,6 @@ enum TextGeometryType {
 };
 
 struct TextGeometry {
-	bool valid;
-
 	enum TextGeometryType type;
 	uint32_t              frame_count;
 	struct TextFrameData {

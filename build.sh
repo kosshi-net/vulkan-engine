@@ -17,3 +17,6 @@ glslc src/glsl/tri.vert -o bin/vert.spv
 
 glslc src/glsl/text.frag -o bin/text.frag.spv
 glslc src/glsl/text.vert -o bin/text.vert.spv
+
+glslc src/glsl/widget.frag -o bin/widget.frag.spv
+glslc src/glsl/widget.vert -o bin/widget.vert.spv

@@ -16,7 +16,7 @@ static struct HandleAllocator alloc = HANDLE_ALLOCATOR(struct TextGeometry, 8);
 
 struct TextGeometry *text_geometry_get_struct(TextGeometry handle)
 {
-	return handle_dereference(&alloc, handle);
+	return handle_deref(&alloc, handle);
 }
 
 void text_geometry_destroy_callback(TextGeometry handle, void*arg)
@@ -36,7 +36,6 @@ TextGeometry text_geometry_destroy(TextGeometry handle)
 		);
 	}
 
-	this->valid = false;
 	return 0;
 }
 
@@ -45,7 +44,7 @@ TextGeometry text_geometry_create(
 	size_t                max_glyphs,
 	enum TextGeometryType type)
 {
-	TextGeometry                  handle = handle_allocate(&alloc);
+	TextGeometry                  handle = handle_alloc(&alloc);
 	struct TextGeometry *restrict this   = text_geometry_get_struct(handle);
 	struct TextRenderer *restrict gfx    = text_renderer_get_struct(gfx_handle);
 
@@ -210,12 +209,12 @@ void text_geometry_push (TextGeometry handle, TextBlock block_handle)
 		int32_t h = quad->slot->h;
 
 		uint32_t out_of_bounds =
-			(x   <  this->scissor.x) +
-			(y   <  this->scissor.y) +
-			(x+w >= this->scissor.w) +
-			(y+h >= this->scissor.h);
+			(x+w   <  this->scissor.x) +
+			(y+h   <  this->scissor.y) +
+			(x+0 >= this->scissor.x+this->scissor.w) +
+			(y+0 >= this->scissor.y+this->scissor.h);
 
-		if (this->scissor_enable && out_of_bounds == 4) continue;
+		if (this->scissor_enable && out_of_bounds == 1) continue;
 
 		float uv_x = quad->slot->atlas_x / (float)engine->atlas.w;
 		float uv_y = quad->slot->atlas_y / (float)engine->atlas.h;
@@ -228,6 +227,8 @@ void text_geometry_push (TextGeometry handle, TextBlock block_handle)
 
 			vert[i].uv[0] = (uv_x + uv_w * (float)quad_vertex[i][0]);
 			vert[i].uv[1] = (uv_y + uv_h * (float)quad_vertex[i][1]);
+
+			vert[i].depth = 5;
 
 			memcpy(vert[i].color, quad->color, sizeof(vert[i].color));
 		}

@@ -9,6 +9,8 @@ enum Resource {
 	RES_SHADER_VERT_TEST,
 	RES_SHADER_FRAG_TEXT,
 	RES_SHADER_VERT_TEXT,
+	RES_SHADER_FRAG_WIDGET,
+	RES_SHADER_VERT_WIDGET,
 };
 
 void *res_file(enum Resource, size_t *);
