@@ -398,10 +398,19 @@ void sphere_renderer_destroy(SphereRenderer *handle)
 
 
 	for (size_t i = 0; i < VK_FRAMES; i++) {
-		vmaUnmapMemory(vk.vma, this->frame[i].scene_alloc);
+
+		struct SphereRendererFrame *frame = &this->frame[i];
+
+		vmaUnmapMemory(vk.vma, frame->scene_alloc);
 		vmaDestroyBuffer(vk.vma, 
-			this->frame[i].scene_buffer, 
-			this->frame[i].scene_alloc
+			frame->scene_buffer, 
+			frame->scene_alloc
+		);
+
+		vmaUnmapMemory(vk.vma, frame->instance_alloc);
+		vmaDestroyBuffer(vk.vma, 
+			frame->instance_buffer, 
+			frame->instance_alloc
 		);
 	}
 
@@ -410,7 +419,7 @@ void sphere_renderer_destroy(SphereRenderer *handle)
 		this->vertex_alloc
 	);
 
-	for (ufast32_t i = 0; i < SPHERE_LODS; i++) {
+	for (size_t i = 0; i < SPHERE_LODS; i++) {
 		vmaDestroyBuffer(vk.vma, 
 			this->lod[i].index_buffer, 
 			this->lod[i].index_alloc

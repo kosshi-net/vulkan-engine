@@ -25,4 +25,3 @@ sphere_renderer_add(
 	uint32_t color
 );
 
-
