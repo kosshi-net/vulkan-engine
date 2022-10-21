@@ -17,17 +17,29 @@ add_executable( engine
 	text/text_renderer.c
 	text/text_geometry.c
 	widget/widget_renderer.c
+
+	sphere/icosphere.c
+	sphere/icosahedron.c
+	sphere/sphere_renderer.c
+
+	#mem/mem.c
+	mem/sysmem.c
+
 	gfx/vma.cpp
 )
 
+
 target_link_libraries( engine
 	game
-	"${OpenMP_CXX_FLAGS}"	
+	"-fopenmp"
 	OpenMP::OpenMP_CXX
+	${OpenMP_CXX_FLAGS}
 	${FRIBIDI_LIBRARIES}
 	vulkan
 	glfw
 	freetype
 	fast_obj_lib
 	harfbuzz
+
 )
+

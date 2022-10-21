@@ -15,11 +15,13 @@
  * TEMP UTILS *
  **************/
 
-float urandf(){
+float urandf(void)
+{
 	return (rand()/(float)RAND_MAX);
 }
 
-float randf(){
+float randf(void)
+{
 	return (rand()/(float)RAND_MAX)*2.0-1.0;
 }
 
@@ -40,7 +42,7 @@ struct TestScene {
 };
 
 static struct TestScene scene = {
-	.object_num = 9,
+	.object_num = 1,
 };
 
 /**********
@@ -351,7 +353,7 @@ void vk_create_pipeline()
 	return;
 }
 
-void vk_create_scene_layout()
+void vk_create_scene_layout(void)
 {
 	VkResult ret;
 
@@ -387,7 +389,7 @@ void vk_create_scene_layout()
 }
 
 
-void vk_create_object_layout()
+void vk_create_object_layout(void)
 {
 	VkResult ret;
 
@@ -543,13 +545,9 @@ void vk_update_object_buffer(struct TeapotFrameData *frame)
 		mat4 model; 
 		glm_mat4_identity(model);
 
-		float *s = scene.seeds+(i*9);
-
-		float t = now*0.3;
-		float x = sin(t+i*0.7)*5.0;
-		float z = cos(t+i*0.7)*5.0;
-		float y = s[8]+1.5;
-
+		glm_rotate_x(model, glm_rad(-90), model);
+		glm_translate_x(model, 2.0);
+		/*
 		glm_translate_x(model, x);
 		glm_translate_y(model, y);
 		glm_translate_z(model, z);
@@ -560,11 +558,10 @@ void vk_update_object_buffer(struct TeapotFrameData *frame)
 		
 		glm_rotate(model, glm_rad(s[6]*360.0), axis);
 		glm_rotate(model, glm_rad(s[7]*now*100.0), axis2);
-
-		float scale = 0.10;
+		*/
+		float scale = 0.02;
 		glm_scale(model, (float[]){scale, scale, scale});
 
-		glm_translate_z(model, -5.0);
 		memcpy(object_buffer[i].model, model, sizeof(model));
 	}
 
@@ -597,10 +594,10 @@ void vk_update_object_buffer(struct TeapotFrameData *frame)
 	free(object_buffer);
 }
 
-void vk_update_uniform_buffer(struct TeapotFrameData *frame, struct Camera *camera)
+void vk_update_uniform_buffer(struct TeapotFrameData *frame, struct Frame *f)
 {
-	glm_mat4_copy(camera->view,       scene_ubo.view);
-	glm_mat4_copy(camera->projection, scene_ubo.proj);
+	glm_mat4_copy(f->camera.view,       scene_ubo.view);
+	glm_mat4_copy(f->camera.projection, scene_ubo.proj);
 
 	void *data;
 	vmaMapMemory(vk.vma, frame->uniform_alloc, &data);
@@ -614,7 +611,7 @@ void gfx_teapot_draw(struct Frame *restrict engine_frame)
 
 	vk_update_object_buffer(frame);
 
-	vk_update_uniform_buffer(frame, &engine_frame->camera);
+	vk_update_uniform_buffer(frame, engine_frame);
 
 	VkCommandBuffer cmd = engine_frame->vk->cmd_buf;
 
@@ -701,7 +698,7 @@ void vk_create_texture(void)
 }
 
 
-void vk_create_texture_view()
+void vk_create_texture_view(void)
 {
 	VkImageViewCreateInfo create_info = {
 		.sType    = VK_STRUCTURE_TYPE_IMAGE_VIEW_CREATE_INFO,

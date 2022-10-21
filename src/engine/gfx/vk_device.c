@@ -128,6 +128,10 @@ void vk_select_gpu(void)
 			continue;
 		}
 
+		if(!dev_features.fillModeNonSolid){
+			continue;
+		}
+
 		vk_find_family_indices( dev[i] );
 
 		if (!vk.family_graphics_valid 
@@ -184,6 +188,9 @@ VkDevice vk_create_device()
 
 	VkPhysicalDeviceFeatures device_features = {
 		.samplerAnisotropy = VK_TRUE,
+		.fillModeNonSolid  = VK_TRUE,
+		.fragmentStoresAndAtomics = VK_TRUE,
+		.vertexPipelineStoresAndAtomics = VK_TRUE,
 	};
 
 	VkDeviceCreateInfo dev_create_info = {

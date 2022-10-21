@@ -5,6 +5,7 @@
 struct Freecam {
 	float yaw;
 	float pitch;
+	float dir[3];
 	float pos[3];
 	float fov;
 };

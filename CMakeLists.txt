@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.12)
+cmake_minimum_required (VERSION 3.9)
 
 project ("vulkantest")
 
@@ -41,6 +41,12 @@ set( VERSION_MINOR 1 )
 			-Wextra 
 			-Wpedantic
 			-Wno-unused-parameter
+			-Wstrict-prototypes
+			-Wold-style-definition
+
+			-Wwrite-strings
+			-Wcast-align
+			-Wshadow
 		)
 	else()
 		set (CMAKE_BUILD_TYPE Release)
@@ -72,7 +78,8 @@ set( VERSION_MINOR 1 )
 
 	# OPENMP
 	find_package(OpenMP REQUIRED)
-	
+	add_compile_options(${OpenMP_CXX_FLAGS})
+
 	# HARFBUZZ
 	find_package(harfbuzz REQUIRED)
 

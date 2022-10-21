@@ -5,6 +5,8 @@
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <vk_mem_alloc.h>
+
+#define CGLM_FORCE_DEPTH_ZERO_TO_ONE
 #include <cglm/cglm.h>
 
 #include "array.h"
@@ -26,6 +28,8 @@ struct VkFrame {
 
 struct VkEngine {
 	GLFWwindow                    *window;
+
+	char dev_name[1024];
 
 	bool _verbose;
 	double                         last_resize;

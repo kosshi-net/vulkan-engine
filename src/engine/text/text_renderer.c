@@ -381,7 +381,7 @@ uint16_t *create_index_buffer(size_t max_glyphs, size_t *size)
 	};
 
 	*size = max_glyphs * sizeof(quad_index);
-	uint16_t *buffer = malloc(*size);
+	uint16_t *buffer = mem_malloc(*size);
 
 	for (ufast32_t i = 0; i < max_glyphs; i++) {
 		fast32_t offset = LENGTH(quad_index) * i;

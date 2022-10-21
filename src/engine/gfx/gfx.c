@@ -29,11 +29,8 @@
 struct VkEngine vk;
 void vk_create_depth_resources(void);
 
-/***************
- * ATTACH DESC *
- ***************/
 
-void vk_create_renderpass()
+static void vk_create_renderpass(void)
 {
 	VkAttachmentDescription color_attachment = {
 		.format  = vk.swapchain_img_format,
@@ -74,17 +71,49 @@ void vk_create_renderpass()
 		.pDepthStencilAttachment = &depth_attachment_reference,
 	};
 
-	VkSubpassDependency dep = {
-		.srcSubpass     = VK_SUBPASS_EXTERNAL,
-		.dstSubpass     = 0,
-		.srcStageMask   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-		                | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-		.srcAccessMask  = 0,
-		.dstStageMask   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
-		                | VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
-		.dstAccessMask  = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
-		                | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+	VkSubpassDependency dep[] = {
+		{
+			.srcSubpass     = VK_SUBPASS_EXTERNAL,
+			.dstSubpass     = 0,
+			.srcStageMask   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+							| VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+			.srcAccessMask  = 0,
+			.dstStageMask   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT
+							| VK_PIPELINE_STAGE_EARLY_FRAGMENT_TESTS_BIT,
+			.dstAccessMask  = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT
+							| VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+		}
 	};
+
+	/*
+	VkSubpassDependency dep[] = {
+		{
+			.srcSubpass     = VK_SUBPASS_EXTERNAL,
+			.dstSubpass     = 0,
+
+			.srcStageMask   = VK_PIPELINE_STAGE_LATE_FRAGMENT_TESTS_BIT,
+			.dstStageMask   = VK_PIPELINE_STAGE_FRAGMENT_SHADER_BIT,
+
+			.srcAccessMask  = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT,
+			.dstAccessMask  = VK_ACCESS_SHADER_READ_BIT,
+
+			.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+		},
+		{
+			.srcSubpass     = 0,
+			.dstSubpass     = VK_SUBPASS_EXTERNAL,
+
+			.srcStageMask   = VK_PIPELINE_STAGE_COLOR_ATTACHMENT_OUTPUT_BIT,
+			.dstStageMask   = VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+
+			.srcAccessMask  = VK_ACCESS_COLOR_ATTACHMENT_WRITE_BIT,
+			.dstAccessMask  = VK_ACCESS_MEMORY_READ_BIT,
+
+			.dependencyFlags = VK_DEPENDENCY_BY_REGION_BIT,
+		}
+	};
+	*/
+
 	VkAttachmentDescription attachments[] = {color_attachment, depth_attachment};
 	VkRenderPassCreateInfo render_pass_info = {
 		.sType           = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO,
@@ -92,8 +121,8 @@ void vk_create_renderpass()
 		.attachmentCount = LENGTH(attachments),
 		.subpassCount    = 1,
 		.pSubpasses      = &subpass,
-		.dependencyCount = 1,
-		.pDependencies   = &dep
+		.dependencyCount = LENGTH(dep),
+		.pDependencies   = dep
 	};
 	
 	VkResult ret = vkCreateRenderPass(vk.dev, &render_pass_info, NULL, &vk.renderpass);
@@ -105,12 +134,12 @@ void vk_create_renderpass()
  * FRAMEBUFFER *
  ***************/ 
 
-void vk_create_framebuffers()
+void vk_create_framebuffers(void)
 {
 	vk.framebuffers_num = vk.swapchain_img_num;
 	vk.framebuffers     = malloc(sizeof(VkFramebuffer) * vk.framebuffers_num);
 
-	for(fast32_t i = 0; i < vk.framebuffers_num; i++){
+	for(size_t i = 0; i < vk.framebuffers_num; i++){
 		VkImageView attachments[] = {
 			vk.swapchain_img_view[i],
 			vk.depth_view,
@@ -135,7 +164,7 @@ void vk_create_framebuffers()
  * COMMANDS *
  ************/
 
-void vk_create_cmd_pool()
+void vk_create_cmd_pool(void)
 {
 	VkResult ret; 
 
@@ -211,14 +240,14 @@ void vk_destroy_frame( struct VkFrame *frame )
 	vkDestroyCommandPool(vk.dev, frame->cmd_pool, NULL);
 }
 
-void vk_create_sync()
+void vk_create_sync(void)
 {
 	vk.fence_image = calloc( sizeof(vk.swapchain_img_num), sizeof(VkFence) );
 	return;
 }
 
 
-void vk_create_descriptor_pool()
+void vk_create_descriptor_pool(void)
 {
 	VkDescriptorPoolSize pool_sizes[] = {
 		{
@@ -250,7 +279,7 @@ void vk_create_descriptor_pool()
 }
 
 
-void vk_recreate_swapchain()
+void vk_recreate_swapchain(void)
 {
 	int width = 0, height = 0;
 	glfwGetFramebufferSize(vk.window, &width, &height);
@@ -275,7 +304,7 @@ void vk_recreate_swapchain()
 }
 
 
-struct VkFrame *gfx_frame_get()
+struct VkFrame *gfx_frame_get(void)
 {
 	VkResult ret;
 
@@ -313,6 +342,15 @@ struct VkFrame *gfx_frame_get()
 	ret = vkBeginCommandBuffer(cmd, &begin_info);
 	if(ret != VK_SUCCESS) engine_crash("vkBeginCommandBuffer failed");
 
+
+
+	return frame;
+}
+
+void gfx_frame_mainpass_begin(struct VkFrame *frame)
+{
+	VkCommandBuffer cmd = frame->cmd_buf;
+
 	VkClearValue clear_color[] = {
 		{{{0.0f, 0.0f, 0.0f, 1.0f}}},
 		{{{1.0,  0.0f}}}
@@ -345,8 +383,11 @@ struct VkFrame *gfx_frame_get()
 	};
 
 	vkCmdSetViewport(cmd, 0, 1, &viewport);
+}
 
-	return frame;
+void gfx_frame_mainpass_end(struct VkFrame *frame)
+{
+	vkCmdEndRenderPass(frame->cmd_buf);
 }
 
 
@@ -354,7 +395,6 @@ void gfx_frame_submit(struct VkFrame *frame)
 {
 	VkResult ret;
 
-	vkCmdEndRenderPass(frame->cmd_buf);
 	ret = vkEndCommandBuffer(frame->cmd_buf);
 	
 	if(ret != VK_SUCCESS) engine_crash("vkEndCommandBuffer failed");
@@ -403,7 +443,7 @@ void gfx_frame_submit(struct VkFrame *frame)
 	vk.current_frame = (vk.current_frame+1) % VK_FRAMES;
 }
 
-void vk_create_texture_sampler()
+void vk_create_texture_sampler(void)
 {
 	VkSamplerCreateInfo sampler_info = {
 		.sType                   = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO,
@@ -429,7 +469,7 @@ void vk_create_texture_sampler()
 	if(ret != VK_SUCCESS) engine_crash("vkCreateSampler failed");
 }
 
-void vk_create_depth_resources()
+void vk_create_depth_resources(void)
 {
 	VkFormat depth_format = vk_find_depth_format();
 
@@ -466,11 +506,8 @@ void vk_create_depth_resources()
 	if (ret != VK_SUCCESS) engine_crash("vkCreateImageView failed");
 }
 
-/*******
- * VMA *
- *******/
 
-void vk_create_allocator()
+void vk_create_allocator(void)
 {
 	VmaAllocatorCreateInfo vma_info = {
 		.vulkanApiVersion = VK_API_VERSION_1_2,
@@ -482,9 +519,7 @@ void vk_create_allocator()
 	if(ret != VK_SUCCESS) engine_crash("vmaCreateAllocator failed");
 }
 
-/********
- * MAIN *
- ********/
+
 
 static void vk_resize_callback(Handle handle, void*arg)
 {
@@ -512,6 +547,7 @@ void gfx_init(void)
 	if (vk.debug) {
 		vk_instance_ext_add(VK_EXT_DEBUG_UTILS_EXTENSION_NAME);
 		vk_validation_add("VK_LAYER_KHRONOS_validation");
+		vk_device_ext_add(VK_KHR_SHADER_NON_SEMANTIC_INFO_EXTENSION_NAME);;
 	}
 
 	vk_create_instance(); 
@@ -521,6 +557,27 @@ void gfx_init(void)
 	vk_device_ext_add(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
 	vk_create_device();
 	vkGetPhysicalDeviceProperties(vk.dev_physical, &vk.dev_properties);
+	
+
+	{
+		/* Make name */
+		static const char *types[] = {
+			[VK_PHYSICAL_DEVICE_TYPE_VIRTUAL_GPU]    = "VIRTUAL",
+			[VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU]   = "DISCRETE",
+			[VK_PHYSICAL_DEVICE_TYPE_CPU]            = "CPU",
+			[VK_PHYSICAL_DEVICE_TYPE_INTEGRATED_GPU] = "INTEGRATED",
+			[VK_PHYSICAL_DEVICE_TYPE_OTHER]          = "OTHER"
+		};
+
+		snprintf(vk.dev_name, sizeof(vk.dev_name), "%s %s Vulkan %i.%i",
+			types[vk.dev_properties.deviceType],
+			vk.dev_properties.deviceName,
+			(vk.dev_properties.apiVersion>>22) & 0x7FU,
+			(vk.dev_properties.apiVersion>>12) & 0x3FFU
+
+		);
+	}
+
 	vk_create_allocator();
 	vk_create_swapchain();
 	vk_create_image_views();

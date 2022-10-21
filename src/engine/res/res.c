@@ -15,6 +15,16 @@ static const char * const resource_paths[] = {
 
 	[RES_SHADER_FRAG_WIDGET]  = "widget.frag.spv",
 	[RES_SHADER_VERT_WIDGET]  = "widget.vert.spv",
+
+	[RES_SHADER_FRAG_SOFTBODY]  = "softbody.frag.spv",
+	[RES_SHADER_VERT_SOFTBODY]  = "softbody.vert.spv",
+	[RES_SHADER_VERT_SOFTBODY_SHADOW]  = "softbody.shadow.vert.spv",
+
+	[RES_SHADER_FRAG_WIREFRAME]  = "wireframe.frag.spv",
+	[RES_SHADER_VERT_WIREFRAME]  = "wireframe.vert.spv",
+
+	[RES_SHADER_FRAG_SPHERE]  = "sphere.frag.spv",
+	[RES_SHADER_VERT_SPHERE]  = "sphere.vert.spv",
 };
 
 void *res_file(enum Resource res, size_t *size)

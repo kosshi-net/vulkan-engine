@@ -3,6 +3,8 @@
 #include "term.h"
 #include "win/win.h"
 
+#include "softbody/softbody.h"
+
 static GLFWwindow *window;
 
 static struct {
@@ -13,20 +15,33 @@ static struct {
 	.cursor_locked = false,
 };
 
+void input_scroll_callback(
+	GLFWwindow *window, 
+	double x, double y)
+{
+	softbody_scroll_callback(x, y);
+}
+
 void input_mouse_callback(
 	GLFWwindow *window, 
 	int key, int action, int mods
 ){
 	if (action == GLFW_PRESS) {
 		if (key == GLFW_MOUSE_BUTTON_LEFT) {
-			term_mouse(action);
-		}
+			if (term_mouse(action)) return;
+
+			if (input.cursor_locked)
+				softbody_button_callback(key, action, mods);
+		} 
 	}
 
 	if (action == GLFW_RELEASE) {
 		if (key == GLFW_MOUSE_BUTTON_LEFT) {
 			if (term_mouse(action)) return;
-			input_cursor_lock();
+			if (!input.cursor_locked)
+				input_cursor_lock();
+			else
+				softbody_button_callback(key, action, mods);
 		}
 	}
 }
@@ -37,8 +52,9 @@ bool input_getkey(int key) {
 
 void input_key_callback( 
 	GLFWwindow *window, 
-	int key, int scancode, int action, int mods
-){
+	int key, int scancode, int action, int mods)
+{
+	softbody_key_callback(key, scancode, action, mods);
 
 	if (action == GLFW_PRESS) {
 
@@ -51,6 +67,7 @@ void input_key_callback(
 		if (key == GLFW_KEY_DELETE) 
 			engine_crash("Test crash");
 		
+
 	}
 
 	if (action == GLFW_RELEASE) {
@@ -65,6 +82,7 @@ int  input_init(void)
 	
 	glfwSetKeyCallback(window, input_key_callback);
 	glfwSetMouseButtonCallback(window, input_mouse_callback);
+	glfwSetScrollCallback(window, input_scroll_callback);
 
 	return 0;
 }

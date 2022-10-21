@@ -6,6 +6,8 @@
 
 #include <stdio.h>
 
+#warning "array_* is depricated"
+
 #ifndef ARR_malloc
 #define ARR_malloc malloc 
 #endif

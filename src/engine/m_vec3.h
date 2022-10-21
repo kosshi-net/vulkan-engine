@@ -21,6 +21,15 @@ static inline void m_set_vv(
 	dst[2] = src[2];
 }
 
+static inline void m_set_vvd(
+	float *dst,
+	float *src,
+	float delta)
+{
+	dst[0] = src[0] * delta;
+	dst[1] = src[1] * delta;
+	dst[2] = src[2] * delta;
+}
 
 /* ADD */
 

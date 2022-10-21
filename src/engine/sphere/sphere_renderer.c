@@ -460,7 +460,7 @@ SphereRenderer sphere_renderer_create(void)
 	/* Geometry */
 
 	VkDeviceSize vksize = mesh->vertex_count * sizeof(struct SphereVertex);
-	struct SphereVertex *vertex = calloc(1, vksize);
+	struct SphereVertex *vertex = mem_calloc(vksize);
 	for (size_t i = 0; i < mesh->vertex_count; i++) {
 		memcpy(&vertex[i].pos, &mesh->vertex[i].pos, 3*sizeof(float));
 	}
@@ -473,15 +473,15 @@ SphereRenderer sphere_renderer_create(void)
 		VK_BUFFER_USAGE_VERTEX_BUFFER_BIT
 	);
 
-	free(vertex);
+	mem_free(vertex);
 	icosphere_destroy(&mesh);
 
 
 	/* Instance buffer */
 
-	this->sphere_max = 1<<13; // 16384
+	this->sphere_max = 1<<14;
 	this->sphere_count = 0;
-	this->sphere = calloc(this->sphere_max, sizeof(*this->sphere));
+	this->sphere = mem_calloc(this->sphere_max*sizeof(*this->sphere));
 
 
 	VkBufferCreateInfo buffer_info = {

@@ -7,17 +7,38 @@
 #include "engine/text/text.h"
 #include "engine/util/ppm.h"
 
+#include "engine/mem/mem.h"
+#include "engine/mem/arr.h"
+
 #include "engine/widget/widget_renderer.h"
 
 #include "input.h"
 #include "freecam.h"
 #include "term.h"
 
+#include "softbody/softbody.h"
+
+extern struct VkEngine vk;
+
+#define HEAP_MEGABYTES 1024
+
+#ifdef NDEBUG
+	#define BUILD_VERSION "Build: " __DATE__" rel\n" 
+#else
+	#define BUILD_VERSION "Build: " __DATE__" debug\n" 
+#endif
+
+void mem_error(enum MEM_ERROR err)
+{
+	engine_crash("Memory error");
+}
+
 int main(int argc, char**argv)
 {
+	mem_init( HEAP_MEGABYTES * 1024*(size_t)1024 );
+	mem_set_error_callback(mem_error);
 	log_info("Hello Vulkan!");
 	
-
 	struct {
 		TextEngine   engine;
 		TextBlock    block;
@@ -36,6 +57,7 @@ int main(int argc, char**argv)
 		.ctl_w = 200
 	};
 	
+
 	txt.engine = text_engine_create();
 	term_create(txt.engine);
 
@@ -54,7 +76,7 @@ int main(int argc, char**argv)
 	txt.term = term_create_gfx(txt.gfx, gui);
 
 	struct TextStyle s;
-	text_block_add(txt.block, "Hello Vulkan!\n", NULL);
+	/*text_block_add(txt.block, "Hello Vulkan!\n", NULL);
 	text_block_add(txt.block, "Teapot ",       textstyle_set(&s, 0xFFFFFFFF, 0));
 	text_block_add(txt.block, "ティーポット ", textstyle_set(&s, 0x44FFFFFF, 0));
 	text_block_add(txt.block, "чайник ",       textstyle_set(&s, 0xFF44FFFF, 0));
@@ -63,7 +85,6 @@ int main(int argc, char**argv)
 	text_block_add(txt.block, "קוּמקוּם  ",      textstyle_set(&s, 0x4444FFFF, 0));
 	text_block_add(txt.block, "τσαγιέρα ",     textstyle_set(&s, 0x44FF44FF, 0));
 	text_block_add(txt.block, "\n\n", NULL);
-
 	textstyle_set(&s, 0xFF4444FF, FONT_STYLE_ITALIC);
 	text_block_add(txt.block, "Italic ", &s);
 
@@ -72,6 +93,8 @@ int main(int argc, char**argv)
 
 	textstyle_set(&s, 0x4444FFFF, FONT_STYLE_ITALIC|FONT_STYLE_BOLD);
 	text_block_add(txt.block, "BoldItalic", &s);
+	*/
+
 
 	text_geometry_set_cursor(txt.geom_static, 32, 64);
 	text_geometry_push(txt.geom_static, txt.block);
@@ -83,7 +106,7 @@ int main(int argc, char**argv)
 	txt.ctl_l = text_block_create(txt.engine);
 
 	textstyle_set(&s, 0xFFFFFFFF, FONT_STYLE_ITALIC);
-	text_block_set(txt.ctl_h, "Controls", &s);
+	text_block_set(txt.ctl_h, "Controls\n\n\n\n\n\n\n\n\nCloth sim", &s);
 	text_block_set(txt.ctl_l,
 		"\n"
 		"Exit\n"
@@ -93,8 +116,14 @@ int main(int argc, char**argv)
 		"Up\n"
 		"Down\n"
 		"Zoom\n"
-		"Crash\n",
-		NULL
+		"Crash\n"
+		"\n"
+		"Toggle wireframe\n"
+		"Toggle spheres\n"
+		"Pause\n"
+		"Step\n"
+		"Substep\n"
+		,NULL
 	);
 	text_block_set(txt.ctl_r,
 		"\n"
@@ -105,15 +134,21 @@ int main(int argc, char**argv)
 		"Space\n"
 		"RShift\n"
 		"ZX\n"
-		"Delete\n",
-		NULL
+		"Delete\n"
+		"\n"
+		"F\n"
+		"G\n"
+		"P\n"
+		"\\\n"
+		"]\n"
+		,NULL
 	);
 	text_block_align(txt.ctl_h, TEXT_ALIGN_CENTER, txt.ctl_w);
 	text_block_align(txt.ctl_l, TEXT_ALIGN_LEFT,   txt.ctl_w);
 	text_block_align(txt.ctl_r, TEXT_ALIGN_RIGHT,  txt.ctl_w);
 
-
 	uint32_t teagfx = gfx_teapot_renderer_create();
+	softbody_create();
 
 	uint32_t frames = 0;
 	uint32_t fps_max = 300;
@@ -124,6 +159,9 @@ int main(int argc, char**argv)
 
 	static struct Freecam freecam = {
 		.fov = 90.0,
+		.pos = {
+			0, 2, 1
+		}
 	};
 
 	while (!win_should_close()) {
@@ -142,14 +180,21 @@ int main(int argc, char**argv)
 		}
 
 		/* Text stuff */
-		char print[1024];
+		char print[4096];
 		snprintf(print, sizeof(print), 
-			"FPS: %i/%i, sleeped %.2fms, busy %.2fms\n"
-			"[%.2f, %.2f, %.2f], [%.1f, %.1f], [%.1f]\n",
-			fps, fps_max, sleep*1000.0, (delta-sleep)*1000.0,
+			"FPS: %i/%i, d %.2fms\n"
+			"Device: %s\n"
+			BUILD_VERSION
+			"%.2f MB / %i MB\n"
+			"[%.2f, %.2f, %.2f], [%.1f, %.1f], [%.1f]\n"
+			"[%.2f, %.2f, %.2f]\n",
+			fps, fps_max, (delta)*1000.0,
+			vk.dev_name,
+			mem_used() / 1024.0f / 1024.0f,  HEAP_MEGABYTES,
 			freecam.pos[0], freecam.pos[1], freecam.pos[2], 
 			freecam.yaw, freecam.pitch,
-			freecam.fov
+			freecam.fov,
+			freecam.dir[0], freecam.dir[1], freecam.dir[2]
 		);
 		text_block_set(txt.perf, print, textstyle_set(&s, 0xFFFFFFFF, FONT_STYLE_MONOSPACE));
 		text_geometry_clear(txt.geom);
@@ -165,27 +210,41 @@ int main(int argc, char**argv)
 		/* Camera stuff */
 		freecam_update(&freecam, delta);
 		freecam_to_camera(&freecam, &frame->camera);
+
 		glm_perspective(
 			glm_rad(freecam.fov),
 			frame->width / (float) frame->height,
-			0.1f, 1000.0f,
+			0.01f, 100.0f,
 			frame->camera.projection
 		);
+
 		frame->camera.projection[1][1] *= -1; 
 
 		/* Render stuff */
-		gfx_teapot_draw(frame);
 
 		widget_renderer_clear(gui);
-		widget_renderer_quad(gui, 10,  210, 50, 50, 256, 0xFF0000FF);
-		widget_renderer_quad(gui, 30,  230, 50, 50, 256, 0x00FF00FF);
 		term_update(frame);
+
+		widget_renderer_quad(gui, frame->width/2-2, frame->height/2-2, 4, 4, 1,
+			0xFFFF00FF
+		);
+
+
+		softbody_update(frame, &freecam);
+		softbody_predraw(frame, &freecam);
+
+		gfx_frame_mainpass_begin(frame->vk);
+
+		softbody_draw(frame, &freecam);
+
 		widget_renderer_draw(gui, frame);
 
 		text_renderer_draw(txt.gfx, txt.term, frame);
 		text_renderer_draw(txt.gfx, txt.geom, frame);
 		text_renderer_draw(txt.gfx, txt.geom_static, frame);
+		gfx_teapot_draw(frame);
 
+		gfx_frame_mainpass_end(frame->vk);
 
 		/* End stuff */
 		frame_end(frame);

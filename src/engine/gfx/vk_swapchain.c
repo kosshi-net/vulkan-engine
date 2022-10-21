@@ -114,7 +114,7 @@ void vk_create_swapchain(void)
 	 * https://github.com/KhronosGroup/Vulkan-Docs/issues/1144 */
 
 
-	uint32_t image_num =swap->capabilities.minImageCount+1;
+	uint32_t image_num = swap->capabilities.minImageCount+1;
 	if (swap->capabilities.maxImageCount > 0)
 		image_num = MIN(image_num, swap->capabilities.maxImageCount);
 

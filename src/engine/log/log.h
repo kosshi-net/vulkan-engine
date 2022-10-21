@@ -48,8 +48,7 @@ void _log(
 	int         line,
 	const char *format,
 	...
-);
-
+) __attribute__ ((format (printf, 5, 6)));
 
 #define log_info(...) \
 	_log(LOG_INFO,     __FILE__, __func__, __LINE__, __VA_ARGS__)

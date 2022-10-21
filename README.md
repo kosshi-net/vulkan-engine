@@ -7,23 +7,24 @@ use. Apart from a simple demo, no actual game will be implemented here.
 
 ## Current features
 ### Demo
+- Softbody cloth
 - Able to load and draw .obj models
 - Freecam controls
 
 ### Engine
-- Unicode text renderer
-- Modular renderer
+- Renderers
+	- Unicode text & ui quads 
+	- General purpose wireframe 
+	- Instanced sphere
+- Modular renderer system
 - Logging system
+- Rudimentary shadows
 - Misc debugging tools
-- WIP: UI toolkit
+- TODO: UI toolkit
 - TODO: In-game shell (with maybe LUA integration?)
 - TODO: Config system
 - TODO: Multithreading (fibers?)
 - TODO: Audio
-
-### Platform support 
-- Linux
-- TODO: Windows 
 
 ### Text rendering 
 - Decent unicode support
@@ -55,6 +56,10 @@ generation. Only monochrome glyphs are supported as well.
 - Make sure atlas upload is synced properly 
 	- Pipeline barriers?
 - Mechanism to safely destroy vulkan objects during runtime
+
+### Platform support 
+- Linux
+- TODO: Windows 
 
 ## Building
 ### Linux 

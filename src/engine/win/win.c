@@ -13,7 +13,7 @@ int win_init(void)
 {
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
 	glfwWindowHint(GLFW_RESIZABLE,  GLFW_TRUE);
-	win = glfwCreateWindow(800,600,"Teapots",NULL,NULL);
+	win = glfwCreateWindow(1200,900,"Teapots",NULL,NULL);
 	glfwSetFramebufferSizeCallback(win, win_resize_callback);
 	
 	return 0;

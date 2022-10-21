@@ -1,5 +1,10 @@
 #pragma once
 
+#include "engine/mem/mem.h"
+#define ARR_malloc  mem_malloc
+#define ARR_free    mem_free
+#define ARR_realloc mem_resize
+
 #include <stdbool.h>
 #include <stdint.h>
 #include <stddef.h>

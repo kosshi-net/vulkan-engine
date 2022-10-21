@@ -27,9 +27,9 @@ struct {
 	int32_t content;
 } term = {
 	.x = 20,
-	.y = 20,
+	.y = 100,
 	.w = 500,
-	.h = 500,
+	.h = 200,
 	.scroll = 0,
 	.margin = 5,
 	.scroll_track = 500-10
@@ -70,7 +70,7 @@ void term_create(TextEngine engine)
 	event_bind(EVENT_LOG, log_callback, 0);
 }
 
-void term_input()
+void term_input(void)
 {
 	double _x, _y;
 	input_cursor_pos(&_x, &_y);
